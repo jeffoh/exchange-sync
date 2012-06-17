@@ -1,5 +1,7 @@
 package com.elasticpath.exchangertmsync;
 
+import java.net.URI;
+
 import com.elasticpath.exchangertmsync.tasksource.TaskDto;
 import com.elasticpath.exchangertmsync.tasksource.TaskSource;
 import com.elasticpath.exchangertmsync.tasksource.exchange.ExchangeTaskSourceImpl;
@@ -27,10 +29,13 @@ public class App {
 			settings.save();
 			String listId = rtmService.getIdForListName(settings.getRtmListName());
 			String timelineId = rtmService.createTimeline();
-			TaskSource exchangeSource = new ExchangeTaskSourceImpl(settings.getExchangeHost(), settings.getExchangeUsername(), settings.getExchangePassword());
-			for (TaskDto task : exchangeSource.getAllTasks()) {
-				rtmService.addTask(timelineId, listId, task);
-			}
+			TaskDto task = new TaskDto();
+			task.setName("Me & I am a fish");
+			rtmService.addTask(timelineId, listId, task);
+//			TaskSource exchangeSource = new ExchangeTaskSourceImpl(settings.getExchangeHost(), settings.getExchangeUsername(), settings.getExchangePassword());
+//			for (TaskDto task : exchangeSource.getAllTasks()) {
+//				rtmService.addTask(timelineId, listId, task);
+//			}
 		} catch (RtmServerException e) {
 			throw new RuntimeException("Unable to authenticate with Remember The Milk", e);
 		}

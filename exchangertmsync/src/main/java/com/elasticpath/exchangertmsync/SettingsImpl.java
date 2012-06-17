@@ -40,9 +40,9 @@ public class SettingsImpl implements RtmSettings, ExchangeSettings {
 	
 	public void save() {
 		try {
-			OutputStream userSettingsStream = new FileOutputStream("rtmsync.properties");
-			userSettings.store(userSettingsStream, null);
-			userSettingsStream.close();
+			OutputStream internalSettingsStream = new FileOutputStream("internal.properties");
+			internalSettings.store(internalSettingsStream, null);
+			internalSettingsStream.close();
 		} catch (FileNotFoundException e) {
 			throw new RuntimeException("Unable to save settings.", e);
 		} catch (IOException e) {

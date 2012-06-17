@@ -12,7 +12,6 @@ import java.util.TreeMap;
 
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.lang.StringUtils;
-import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URIBuilder;
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
@@ -171,7 +170,7 @@ public class RtmService {
 		for (String key : params.keySet()) {
 			builder.setParameter(key, params.get(key));
 		}
-		builder.setParameter("api_sig", getApiSig(builder.build()));
+		builder.setParameter("api_sig", getApiSig(params));
 		return builder.build();
 	}
 
@@ -197,12 +196,13 @@ public class RtmService {
 		}
 	}
 
-	private String getApiSig(final URI uri) {
+	private String getApiSig(final TreeMap<String, String> params) {
 		byte[] thedigest = null;
-		String rawQuery =  uri.getRawQuery();
-		rawQuery = rawQuery.replaceAll("&", "");
-		rawQuery = rawQuery.replaceAll("=", "");
-		String rawString = sharedSecret + rawQuery;
+		StringBuffer rawString = new StringBuffer(sharedSecret);
+		for (String key : params.keySet()) {
+			rawString.append(key);
+			rawString.append(params.get(key));
+		}
 		try {
 			byte[] bytesOfMessage = rawString.toString().getBytes("UTF-8");
 			MessageDigest md = MessageDigest.getInstance("MD5");
