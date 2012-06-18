@@ -8,26 +8,36 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.time.DateFormatUtils;
 
 public class TaskDto {
-	private String rtmId;
-	private String otherId;
+	private String rtmTaskId;
+	private String rtmTimeSeriesId;
+	private String exchangeId;
 	private String name;
 	private Date dueDate;
 	private Byte priority;
+	private boolean completed;
 	
-	public String getRtmId() {
-		return rtmId;
+	public String getRtmTaskId() {
+		return rtmTaskId;
 	}
 
-	public void setRtmId(String rtmId) {
-		this.rtmId = rtmId;
+	public void setRtmTaskId(String rtmTaslId) {
+		this.rtmTaskId = rtmTaslId;
 	}
 
-	public String getOtherId() {
-		return otherId;
+	public String getRtmTimeSeriesId() {
+		return rtmTimeSeriesId;
 	}
 
-	public void setOtherId(String otherId) {
-		this.otherId = otherId;
+	public void setRtmTimeSeriesId(String rtmTimeSeriesId) {
+		this.rtmTimeSeriesId = rtmTimeSeriesId;
+	}
+
+	public String getExchangeId() {
+		return exchangeId;
+	}
+
+	public void setExchangeId(String exchangeId) {
+		this.exchangeId = exchangeId;
 	}
 
 	public String getName() {
@@ -54,6 +64,20 @@ public class TaskDto {
 		this.priority = priority;
 	}
 	
+	/**
+	 * @return the completed
+	 */
+	public boolean isCompleted() {
+		return completed;
+	}
+
+	/**
+	 * @param completed the completed to set
+	 */
+	public void setCompleted(boolean completed) {
+		this.completed = completed;
+	}
+
 	public String getSmartAdd() {
 		List<String> components = new ArrayList<String>();
 		components.add(name);

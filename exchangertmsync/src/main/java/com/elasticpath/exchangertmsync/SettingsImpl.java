@@ -93,4 +93,17 @@ public class SettingsImpl implements RtmSettings, ExchangeSettings {
 	public String getExchangePassword() {
 		return userSettings.getProperty("exchangePassword");
 	}
+	
+	public void addRtmExchangeLink(String taskId, String exchangeId) {
+		internalSettings.setProperty("taskId" + taskId, exchangeId);
+		internalSettings.setProperty("exchangeId" + exchangeId, taskId);
+	}
+
+	public String getExchangeId(String taskId) {
+		return internalSettings.getProperty("taskId" + taskId);
+	}
+
+	public String getTaskId(String exchangeId) {
+		return internalSettings.getProperty("exchangeId" + exchangeId);
+	}
 }

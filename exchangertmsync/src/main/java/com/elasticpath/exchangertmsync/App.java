@@ -1,6 +1,10 @@
 package com.elasticpath.exchangertmsync;
 
-import java.net.URI;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import com.elasticpath.exchangertmsync.tasksource.TaskDto;
 import com.elasticpath.exchangertmsync.tasksource.TaskSource;
@@ -26,18 +30,48 @@ public class App {
 			case NEEDS_AUTH_TOKEN:
 				rtmService.completeAuthentication();
 			}
-			settings.save();
 			String listId = rtmService.getIdForListName(settings.getRtmListName());
 			String timelineId = rtmService.createTimeline();
-			TaskDto task = new TaskDto();
-			task.setName("Me & I am a fish");
-			rtmService.addTask(timelineId, listId, task);
-//			TaskSource exchangeSource = new ExchangeTaskSourceImpl(settings.getExchangeHost(), settings.getExchangeUsername(), settings.getExchangePassword());
-//			for (TaskDto task : exchangeSource.getAllTasks()) {
-//				rtmService.addTask(timelineId, listId, task);
-//			}
+			TaskSource exchangeSource = new ExchangeTaskSourceImpl(settings.getExchangeHost(), settings.getExchangeUsername(), settings.getExchangePassword());
+			List<Pair<TaskDto, TaskDto>> pairs = generatePairs(settings, rtmService.getTasks(listId), exchangeSource.getAllTasks());
+			for (Pair<TaskDto, TaskDto> pair : pairs) {
+				if (pair.getLeft() != null && pair.getRight() == null) {
+					rtmService.addTask(timelineId, listId, pair.getLeft());
+					settings.addRtmExchangeLink(pair.getLeft().getRtmTaskId(), pair.getLeft().getExchangeId());
+					System.out.println("Added " + pair.getLeft().getName() + " to RTM.");
+				} else if (pair.getLeft() != null && pair.getRight() != null) {
+					if (pair.getLeft().isCompleted() && !pair.getRight().isCompleted()) {
+						// Mark RTM task as completed
+						rtmService.completeTask(timelineId, listId, pair.getRight());
+					} else if (!pair.getLeft().isCompleted() && pair.getRight().isCompleted()) {
+						// Mark exchange task as completed
+					}
+				}
+			}
 		} catch (RtmServerException e) {
 			throw new RuntimeException("Unable to authenticate with Remember The Milk", e);
+		} finally {
+			settings.save();
 		}
+	}
+	
+	private static Map<String, TaskDto> generateRtmTaskIdMap(Collection<TaskDto> rtmTasks) {
+		Map<String, TaskDto> results = new HashMap<String, TaskDto>();
+		for (TaskDto task : rtmTasks) {
+			results.put(task.getRtmTaskId(), task);
+		}
+		return results;
+	}
+
+	private static List<Pair<TaskDto, TaskDto>> generatePairs(SettingsImpl settings, Collection<TaskDto> rtmTasks, Collection<TaskDto> exchangeTasks) {
+		List<Pair<TaskDto, TaskDto>> results = new ArrayList<Pair<TaskDto, TaskDto>>();
+		Map<String, TaskDto> rtmTaskIdMap = generateRtmTaskIdMap(rtmTasks);
+		for (TaskDto exchangeTask : exchangeTasks) {
+			String rtmTaskId = settings.getTaskId(exchangeTask.getExchangeId());
+			TaskDto rtmTask = rtmTaskIdMap.get(rtmTaskId);
+			Pair<TaskDto, TaskDto> pair = new Pair<TaskDto, TaskDto>(exchangeTask, rtmTask);
+			results.add(pair);
+		}
+		return results;
 	}
 }
