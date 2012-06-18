@@ -49,12 +49,12 @@ public class App {
 				}
 			}
 		} catch (RtmServerException e) {
-			throw new RuntimeException("Unable to authenticate with Remember The Milk", e);
+			throw new RuntimeException("An unexpected exception was thrown by Remember The Milk", e);
 		} finally {
 			settings.save();
 		}
 	}
-	
+
 	private static Map<String, TaskDto> generateRtmTaskIdMap(Collection<TaskDto> rtmTasks) {
 		Map<String, TaskDto> results = new HashMap<String, TaskDto>();
 		for (TaskDto task : rtmTasks) {

@@ -6,6 +6,7 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.Observer;
 import java.util.Set;
+import java.util.UUID;
 
 import microsoft.exchange.webservices.data.BasePropertySet;
 import microsoft.exchange.webservices.data.ExchangeCredentials;
@@ -30,11 +31,12 @@ import com.elasticpath.exchangertmsync.tasksource.TaskSource;
 public class ExchangeTaskSourceImpl implements TaskSource {
 	private static final int PID_TAG_FLAG_STATUS = 0x1090; // http://msdn.microsoft.com/en-us/library/cc842307
 	private static final int PID_TAG_TASK_DUE_DATE = 0x8105; // http://msdn.microsoft.com/en-us/library/cc839641
-	
+	private static final UUID PROPERTY_SET_TASK = UUID.fromString("00062003-0000-0000-C000-000000000046");
+
 	private String mailHost;
 	private String username;
 	private String password;
-	
+
 	public ExchangeTaskSourceImpl(String mailHost, String username, String password) {
 		this.mailHost = mailHost;
 		this.username = username;
@@ -52,7 +54,7 @@ public class ExchangeTaskSourceImpl implements TaskSource {
 //			service.setTraceEnabled(true);
 			// Take a look at http://blogs.planetsoftware.com.au/paul/archive/2010/05/20/exchange-web-services-ews-managed-api-ndash-part-2.aspx
 			ExtendedPropertyDefinition PR_FLAG_STATUS = new ExtendedPropertyDefinition(PID_TAG_FLAG_STATUS, MapiPropertyType.Integer);
-			ExtendedPropertyDefinition PR_TASK_DUE_DATE = new ExtendedPropertyDefinition(PID_TAG_TASK_DUE_DATE, MapiPropertyType.Integer);
+			ExtendedPropertyDefinition PR_TASK_DUE_DATE = new ExtendedPropertyDefinition(PROPERTY_SET_TASK, PID_TAG_TASK_DUE_DATE, MapiPropertyType.SystemTime); // Tag num: 0x802C0040
 			SearchFilterCollection searchFilterCollection = new SearchFilterCollection(LogicalOperator.Or);
 			searchFilterCollection.add(new SearchFilter.IsEqualTo(PR_FLAG_STATUS, "1"));
 			searchFilterCollection.add(new SearchFilter.IsEqualTo(PR_FLAG_STATUS, "2"));
@@ -62,16 +64,16 @@ public class ExchangeTaskSourceImpl implements TaskSource {
 				Integer flagValue = null;
 				Date dueDate = null;
 				for (ExtendedProperty extendedProperty : email.getExtendedProperties()) {
-					if (extendedProperty.getPropertyDefinition().equals(PR_FLAG_STATUS)) {
+					if (extendedProperty.getPropertyDefinition().getTag() != null && extendedProperty.getPropertyDefinition().getTag() == 16) {
 						flagValue = (Integer) extendedProperty.getValue();
-					} else if (extendedProperty.getPropertyDefinition().equals(PR_TASK_DUE_DATE)) {
+					} else if (extendedProperty.getPropertyDefinition().getId() != null && extendedProperty.getPropertyDefinition().getId() == PID_TAG_TASK_DUE_DATE) {
 						dueDate = (Date) extendedProperty.getValue();
 					}
 				}
 				TaskDto task = new TaskDto();
 				task.setExchangeId(email.getId().getUniqueId());
 				task.setName(email.getSubject());
-				if (flagValue == 1) {
+				if (flagValue != null && flagValue == 1) {
 					task.setCompleted(true);
 				}
 				task.setDueDate(dueDate);
@@ -87,7 +89,7 @@ public class ExchangeTaskSourceImpl implements TaskSource {
 
 	private ItemView createItemView(int maxResults, ExtendedPropertyDefinition... extendedFields) {
 		ItemView itemView = new ItemView(maxResults);
-		PropertySet extendedPropertySet = new PropertySet(BasePropertySet.FirstClassProperties, extendedFields);
+		PropertySet extendedPropertySet = new PropertySet(BasePropertySet.FirstClassProperties, extendedFields); //BasePropertySet.IdOnly?
 		itemView.setPropertySet(extendedPropertySet);
 		return itemView;
 	}
