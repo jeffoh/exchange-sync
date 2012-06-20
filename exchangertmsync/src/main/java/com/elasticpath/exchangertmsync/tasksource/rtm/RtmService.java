@@ -3,8 +3,8 @@ package com.elasticpath.exchangertmsync.tasksource.rtm;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -14,7 +14,6 @@ import java.util.TreeMap;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.time.DateFormatUtils;
-import org.apache.http.client.utils.URIBuilder;
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
 import org.dom4j.Node;
@@ -63,7 +62,7 @@ public class RtmService {
 			return getRtmUri(REST_AUTH_PATH, params).toURL();
 		} catch (MalformedURLException e) {
 			throw new RuntimeException("Unable to get authentication url", e);
-		} catch (URISyntaxException e) {
+		} catch (UnsupportedEncodingException e) {
 			throw new RuntimeException("Unable to get authentication url", e);
 		}
 	}
@@ -79,7 +78,7 @@ public class RtmService {
 			Document response = parseXML(getRtmUri(REST_METHOD_PATH, params));
 			Node node = response.selectSingleNode("/rsp/auth/token");
 			settings.setAuthToken(node.getText());
-		} catch (URISyntaxException e) {
+		} catch (UnsupportedEncodingException e) {
 			throw new RuntimeException("Unable to complete authentication", e);
 		} finally {
 			settings.setFrob(null);
@@ -98,7 +97,7 @@ public class RtmService {
 				}
 			}
 			throw new RuntimeException("Unable to find list named " + listName);
-		} catch (URISyntaxException e) {
+		} catch (UnsupportedEncodingException e) {
 			throw new RuntimeException("Unable to retrieve list of lists", e);
 		}
 	}
@@ -114,7 +113,7 @@ public class RtmService {
 			Document response = parseXML(getRtmMethodUri("rtm.timelines.create"));
 			Node node = response.selectSingleNode("/rsp/timeline");
 			return node.getText();
-		} catch (URISyntaxException e) {
+		} catch (UnsupportedEncodingException e) {
 			throw new RuntimeException("Unable to create timeline", e);
 		}
 	}
@@ -132,7 +131,6 @@ public class RtmService {
 			addTaskParams.put("list_id", listId);
 			addTaskParams.put("name", task.getName());
 			Document response = parseXML(getRtmMethodUri("rtm.tasks.add", addTaskParams));
-			System.out.println(response.asXML());
 			Node idNode = response.selectSingleNode("/rsp/list/taskseries/task/@id");
 			task.setRtmTaskId(idNode.getText());
 			Node taskSeriesIdNode = response.selectSingleNode("/rsp/list/taskseries/@id");
@@ -146,15 +144,15 @@ public class RtmService {
 				setDueDateParams.put("timeline", timelineId);
 				setDueDateParams.put("list_id", listId);
 				setDueDateParams.put("due", DateFormatUtils.format(task.getDueDate(), "yyyy-MM-dd") + "T00:00:00Z");
-				setDueDateParams.put("has_due_time", "0");
-				parseXML(getRtmMethodUri("rtm.tasks.setDueDate", setDueDateParams));
+				Document dueDateResponse = parseXML(getRtmMethodUri("rtm.tasks.setDueDate", setDueDateParams));
+				System.out.println(dueDateResponse.asXML());
 			}
 
 			// Set completed (if required)
 			if (task.isCompleted()) {
 				completeTask(timelineId, listId, task);
 			}
-		} catch (URISyntaxException e) {
+		} catch (UnsupportedEncodingException e) {
 			throw new RuntimeException("Unable to add task", e);
 		}
 	}
@@ -168,11 +166,11 @@ public class RtmService {
 		try {
 			TreeMap<String, String> setCompletedParams = new TreeMap<String, String>();
 			setCompletedParams.put("task_id", task.getRtmTaskId());
-			setCompletedParams.put("taskseries_id ", task.getRtmTimeSeriesId());
+			setCompletedParams.put("taskseries_id", task.getRtmTimeSeriesId());
 			setCompletedParams.put("timeline", timelineId);
 			setCompletedParams.put("list_id", listId);
 			parseXML(getRtmMethodUri("rtm.tasks.complete", setCompletedParams));
-		} catch (URISyntaxException e) {
+		} catch (UnsupportedEncodingException e) {
 			throw new RuntimeException("Unable to add task", e);
 		}
 	}
@@ -204,7 +202,7 @@ public class RtmService {
 				results.add(task);
 			}
 			return results;
-		} catch (URISyntaxException e) {
+		} catch (UnsupportedEncodingException e) {
 			throw new RuntimeException("Unable to add task", e);
 		}
 	}
@@ -219,32 +217,29 @@ public class RtmService {
 				return true;
 			}
 			return false;
-		} catch (URISyntaxException e) {
+		} catch (UnsupportedEncodingException e) {
 			throw new RuntimeException("Unable to check token", e);
 		}
 	}
 
-	private URI getRtmMethodUri(final String methodName) throws URISyntaxException {
+	private URI getRtmMethodUri(final String methodName) throws UnsupportedEncodingException {
 		return getRtmMethodUri(methodName, new TreeMap<String, String>());
 	}
 
-	private URI getRtmMethodUri(final String methodName, final TreeMap<String, String> params) throws URISyntaxException {
+	private URI getRtmMethodUri(final String methodName, final TreeMap<String, String> params) throws UnsupportedEncodingException {
 		params.put("method", methodName);
 		params.put("auth_token", settings.getAuthToken());
 		return getRtmUri(REST_METHOD_PATH, params);
 	}
 
-	private URI getRtmUri(final String uriPath, final TreeMap<String, String> params) throws URISyntaxException {
+	private URI getRtmUri(final String uriPath, final TreeMap<String, String> params) throws UnsupportedEncodingException {
 		params.put("api_key", apiKey);
-		URIBuilder builder = new URIBuilder();
-		builder.setScheme("http").setHost(REST_HOST).setPath(uriPath);
+		StringBuffer uriString = new StringBuffer("http://" + REST_HOST + uriPath + "?");
 		for (String key : params.keySet()) {
-			// Remove characters that RTM doesn't seem to support
-			params.put(key, params.get(key).replaceAll("[^\\w\\s\\.]", ""));
-			builder.setParameter(key, params.get(key));
+			uriString.append(key).append("=").append(URLEncoder.encode(params.get(key), "UTF-8")).append("&");
 		}
-		builder.setParameter("api_sig", getApiSig(params));
-		return builder.build();
+		uriString.append("api_sig").append("=").append(getApiSig(params));
+		return URI.create(uriString.toString());
 	}
 
 	private Document parseXML(final URI uri) throws RtmServerException {
@@ -271,7 +266,6 @@ public class RtmService {
 	}
 
 	private String getApiSig(final TreeMap<String, String> params) {
-		byte[] thedigest = null;
 		StringBuffer rawString = new StringBuffer(sharedSecret);
 		for (String key : params.keySet()) {
 			rawString.append(key);
@@ -281,12 +275,12 @@ public class RtmService {
 		try {
 			byte[] bytesOfMessage = rawString.toString().getBytes("UTF-8");
 			MessageDigest md = MessageDigest.getInstance("MD5");
-			thedigest = md.digest(bytesOfMessage);
+			byte[] thedigest = md.digest(bytesOfMessage);
+			return new String(Hex.encodeHex(thedigest));
 		} catch (NoSuchAlgorithmException e) {
 			throw new RuntimeException("Unable to create API signature", e);
 		} catch (UnsupportedEncodingException e) {
 			throw new RuntimeException("Unable to create API signature", e);
 		}
-		return new String(Hex.encodeHex(thedigest));
 	}
 }
