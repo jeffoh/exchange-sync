@@ -9,6 +9,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.TreeMap;
 
 import org.apache.commons.codec.binary.Hex;
@@ -19,7 +20,8 @@ import org.dom4j.DocumentException;
 import org.dom4j.Node;
 import org.dom4j.io.SAXReader;
 
-import com.elasticpath.exchangertmsync.tasksource.TaskDto;
+import com.elasticpath.exchangertmsync.tasksource.rtm.dto.NoteDto;
+import com.elasticpath.exchangertmsync.tasksource.rtm.dto.TaskDto;
 
 public class RtmService {
 	private static final String REST_HOST = "api.rememberthemilk.com";
@@ -120,7 +122,10 @@ public class RtmService {
 
 	/**
 	 * Add a new task.
-	 *
+	 * 
+	 * @param timelineId
+	 * @param listId
+	 * @param task
 	 * @throws RtmServerException
 	 */
 	public void addTask(final String timelineId, final String listId, final TaskDto task) throws RtmServerException {
@@ -135,22 +140,27 @@ public class RtmService {
 			task.setRtmTaskId(idNode.getText());
 			Node taskSeriesIdNode = response.selectSingleNode("/rsp/list/taskseries/@id");
 			task.setRtmTimeSeriesId(taskSeriesIdNode.getText());
-
+			
 			// Set due date (if required)
 			if (task.getDueDate() != null) {
-				TreeMap<String, String> setDueDateParams = new TreeMap<String, String>();
-				setDueDateParams.put("task_id", task.getRtmTaskId());
-				setDueDateParams.put("taskseries_id", task.getRtmTimeSeriesId());
-				setDueDateParams.put("timeline", timelineId);
-				setDueDateParams.put("list_id", listId);
-				setDueDateParams.put("due", DateFormatUtils.format(task.getDueDate(), "yyyy-MM-dd") + "T00:00:00Z");
-				Document dueDateResponse = parseXML(getRtmMethodUri("rtm.tasks.setDueDate", setDueDateParams));
-				System.out.println(dueDateResponse.asXML());
+				updateDueDate(timelineId, listId, task);
 			}
-
+			
 			// Set completed (if required)
 			if (task.isCompleted()) {
 				completeTask(timelineId, listId, task);
+			}
+			
+			// Add tags (if required)
+			if (!task.getTags().isEmpty()) {
+				addTags(timelineId, listId, task, task.getTags());
+			}
+			
+			// Add notes (if required)
+			if (!task.getNotes().isEmpty()) {
+				for (final NoteDto note : task.getNotes()) {
+					addNote(timelineId, listId, task, note);
+				}
 			}
 		} catch (UnsupportedEncodingException e) {
 			throw new RuntimeException("Unable to add task", e);
@@ -158,8 +168,75 @@ public class RtmService {
 	}
 
 	/**
-	 * Mark a task as completed
-	 *
+	 * Update a task's due date.
+	 * 
+	 * @param timelineId
+	 * @param listId
+	 * @param task
+	 * @throws RtmServerException
+	 * @throws UnsupportedEncodingException
+	 */
+	public void updateDueDate(final String timelineId, final String listId,
+			final TaskDto task) throws RtmServerException,
+			UnsupportedEncodingException {
+		TreeMap<String, String> setDueDateParams = new TreeMap<String, String>();
+		setDueDateParams.put("task_id", task.getRtmTaskId());
+		setDueDateParams.put("taskseries_id", task.getRtmTimeSeriesId());
+		setDueDateParams.put("timeline", timelineId);
+		setDueDateParams.put("list_id", listId);
+		setDueDateParams.put("due", DateFormatUtils.format(task.getDueDate(), "yyyy-MM-dd") + "T00:00:00Z");
+		parseXML(getRtmMethodUri("rtm.tasks.setDueDate", setDueDateParams));
+	}
+
+	/**
+	 * Add tags to a task.
+	 * 
+	 * @param timelineId
+	 * @param listId
+	 * @param task
+	 * @throws RtmServerException
+	 * @throws UnsupportedEncodingException
+	 */
+	public void addTags(final String timelineId, final String listId,
+			final TaskDto task, final Set<String> tags) throws RtmServerException,
+			UnsupportedEncodingException {
+		TreeMap<String, String> addTagsParams = new TreeMap<String, String>();
+		addTagsParams.put("task_id", task.getRtmTaskId());
+		addTagsParams.put("taskseries_id", task.getRtmTimeSeriesId());
+		addTagsParams.put("timeline", timelineId);
+		addTagsParams.put("list_id", listId);
+		addTagsParams.put("tags", StringUtils.join(tags, ","));
+		parseXML(getRtmMethodUri("rtm.tasks.addTags", addTagsParams));
+	}
+
+	/**
+	 * Add a note to a task.
+	 * 
+	 * @param timelineId
+	 * @param listId
+	 * @param task
+	 * @throws RtmServerException
+	 * @throws UnsupportedEncodingException
+	 */
+	public void addNote(final String timelineId, final String listId,
+			final TaskDto task, final NoteDto note) throws RtmServerException,
+			UnsupportedEncodingException {
+		TreeMap<String, String> addNoteParams = new TreeMap<String, String>();
+		addNoteParams.put("task_id", task.getRtmTaskId());
+		addNoteParams.put("taskseries_id", task.getRtmTimeSeriesId());
+		addNoteParams.put("timeline", timelineId);
+		addNoteParams.put("list_id", listId);
+		addNoteParams.put("note_title", note.getTitle());
+		addNoteParams.put("note_text", note.getBody());
+		parseXML(getRtmMethodUri("rtm.tasks.notes.add", addNoteParams));
+	}
+
+	/**
+	 * Mark a task as completed.
+	 * 
+	 * @param timelineId
+	 * @param listId
+	 * @param task
 	 * @throws RtmServerException
 	 */
 	public void completeTask(final String timelineId, final String listId, final TaskDto task) throws RtmServerException {
@@ -188,6 +265,7 @@ public class RtmService {
 			TreeMap<String, String> params = new TreeMap<String, String>();
 			params.put("list_id", listId);
 			Document response = parseXML(getRtmMethodUri("rtm.tasks.getList", params));
+			System.out.println(response.asXML());
 			List<Node> taskSeriesNodesList = response.selectNodes("/rsp/tasks/list/taskseries");
 			for (Node taskSeriesNode : taskSeriesNodesList) {
 				Node timeSeriesIdNode = taskSeriesNode.selectSingleNode("@id");
@@ -199,6 +277,17 @@ public class RtmService {
 				task.setRtmTimeSeriesId(timeSeriesIdNode.getText());
 				task.setName(nameNode.getText());
 				task.setCompleted(StringUtils.isNotEmpty(completedNode.getText()));
+				List<Node> tagNodes = taskSeriesNode.selectNodes("tags/tag");
+				for (Node tagNode : tagNodes) {
+					task.addTag(tagNode.getText());
+				}
+				List<Node> noteNodes = taskSeriesNode.selectNodes("notes/note");
+				for (Node noteNode : noteNodes) {
+					NoteDto note = new NoteDto();
+					note.setTitle(noteNode.selectSingleNode("@title").getText());
+					note.setBody(noteNode.getText());
+					task.addNote(note);
+				}
 				results.add(task);
 			}
 			return results;

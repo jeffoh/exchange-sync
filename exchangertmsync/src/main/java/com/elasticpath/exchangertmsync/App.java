@@ -6,11 +6,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.elasticpath.exchangertmsync.tasksource.TaskDto;
-import com.elasticpath.exchangertmsync.tasksource.TaskSource;
-import com.elasticpath.exchangertmsync.tasksource.exchange.ExchangeTaskSourceImpl;
+import com.elasticpath.exchangertmsync.tasksource.exchange.ExchangeTaskSource;
+import com.elasticpath.exchangertmsync.tasksource.exchange.dto.ExchangeTaskDto;
 import com.elasticpath.exchangertmsync.tasksource.rtm.RtmServerException;
-import com.elasticpath.exchangertmsync.tasksource.rtm.RtmService;
 
 
 public class App {
@@ -19,7 +17,9 @@ public class App {
 
 	public static void main(String[] args) {
 		SettingsImpl settings = new SettingsImpl();
-		RtmService rtmService = new RtmService(RTM_API_KEY, RTM_SHARED_SECRET, settings);
+		
+		// Initialize RTM source
+		CustomRtmService rtmService = new CustomRtmService(RTM_API_KEY, RTM_SHARED_SECRET, settings);
 		try {
 			switch (rtmService.getAuthStatus()) {
 			case NEEDS_USER_APPROVAL:
@@ -32,12 +32,19 @@ public class App {
 			}
 			String listId = rtmService.getIdForListName(settings.getRtmListName());
 			String timelineId = rtmService.createTimeline();
-			TaskSource exchangeSource = new ExchangeTaskSourceImpl(settings.getExchangeHost(), settings.getExchangeUsername(), settings.getExchangePassword());
-			List<Pair<TaskDto, TaskDto>> pairs = generatePairs(settings, rtmService.getTasks(listId), exchangeSource.getAllTasks());
-			for (Pair<TaskDto, TaskDto> pair : pairs) {
+			
+			// Initialize exchange source
+			ExchangeTaskSource exchangeSource = new ExchangeTaskSource(settings.getExchangeHost(), settings.getExchangeUsername(), settings.getExchangePassword());
+			
+			// Generate matching pairs of tasks 
+			List<Pair<ExchangeTaskDto, ExchangeTaskDto>> pairs = generatePairs(settings,
+					rtmService.getTasksWithExchangeId(listId),
+					exchangeSource.getAllTasks());
+			
+			// Create/complete/delete as required
+			for (Pair<ExchangeTaskDto, ExchangeTaskDto> pair : pairs) {
 				if (pair.getLeft() != null && pair.getRight() == null) {
 					rtmService.addTask(timelineId, listId, pair.getLeft());
-					settings.addRtmExchangeLink(pair.getLeft().getRtmTaskId(), pair.getLeft().getExchangeId());
 					System.out.println("Added " + pair.getLeft().getName() + " to RTM.");
 				} else if (pair.getLeft() != null && pair.getRight() != null) {
 					if (pair.getLeft().isCompleted() && !pair.getRight().isCompleted()) {
@@ -55,21 +62,20 @@ public class App {
 		}
 	}
 
-	private static Map<String, TaskDto> generateRtmTaskIdMap(Collection<TaskDto> rtmTasks) {
-		Map<String, TaskDto> results = new HashMap<String, TaskDto>();
-		for (TaskDto task : rtmTasks) {
-			results.put(task.getRtmTaskId(), task);
+	private static Map<String, ExchangeTaskDto> generateExchangeIdMap(Collection<ExchangeTaskDto> rtmTasks) {
+		Map<String, ExchangeTaskDto> results = new HashMap<String, ExchangeTaskDto>();
+		for (ExchangeTaskDto task : rtmTasks) {
+			results.put(task.getExchangeId(), task);
 		}
 		return results;
 	}
 
-	private static List<Pair<TaskDto, TaskDto>> generatePairs(SettingsImpl settings, Collection<TaskDto> rtmTasks, Collection<TaskDto> exchangeTasks) {
-		List<Pair<TaskDto, TaskDto>> results = new ArrayList<Pair<TaskDto, TaskDto>>();
-		Map<String, TaskDto> rtmTaskIdMap = generateRtmTaskIdMap(rtmTasks);
-		for (TaskDto exchangeTask : exchangeTasks) {
-			String rtmTaskId = settings.getTaskId(exchangeTask.getExchangeId());
-			TaskDto rtmTask = rtmTaskIdMap.get(rtmTaskId);
-			Pair<TaskDto, TaskDto> pair = new Pair<TaskDto, TaskDto>(exchangeTask, rtmTask);
+	private static List<Pair<ExchangeTaskDto, ExchangeTaskDto>> generatePairs(SettingsImpl settings, Collection<ExchangeTaskDto> rtmTasks, Collection<ExchangeTaskDto> exchangeTasks) {
+		List<Pair<ExchangeTaskDto, ExchangeTaskDto>> results = new ArrayList<Pair<ExchangeTaskDto, ExchangeTaskDto>>();
+		Map<String, ExchangeTaskDto> rtmTaskIdMap = generateExchangeIdMap(rtmTasks);
+		for (ExchangeTaskDto exchangeTask : exchangeTasks) {
+			ExchangeTaskDto rtmTask = rtmTaskIdMap.get(exchangeTask.getExchangeId());
+			Pair<ExchangeTaskDto, ExchangeTaskDto> pair = new Pair<ExchangeTaskDto, ExchangeTaskDto>(exchangeTask, rtmTask);
 			results.add(pair);
 		}
 		return results;

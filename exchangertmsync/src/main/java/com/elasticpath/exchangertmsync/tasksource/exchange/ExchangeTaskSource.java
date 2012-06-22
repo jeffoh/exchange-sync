@@ -25,10 +25,9 @@ import microsoft.exchange.webservices.data.SearchFilter.SearchFilterCollection;
 import microsoft.exchange.webservices.data.WebCredentials;
 import microsoft.exchange.webservices.data.WellKnownFolderName;
 
-import com.elasticpath.exchangertmsync.tasksource.TaskDto;
-import com.elasticpath.exchangertmsync.tasksource.TaskSource;
+import com.elasticpath.exchangertmsync.tasksource.exchange.dto.ExchangeTaskDto;
 
-public class ExchangeTaskSourceImpl implements TaskSource {
+public class ExchangeTaskSource {
 	private static final int PID_TAG_FLAG_STATUS = 0x1090; // http://msdn.microsoft.com/en-us/library/cc842307
 	private static final int PID_TAG_TASK_DUE_DATE = 0x8105; // http://msdn.microsoft.com/en-us/library/cc839641
 	private static final UUID PROPERTY_SET_TASK = UUID.fromString("00062003-0000-0000-C000-000000000046");
@@ -37,15 +36,14 @@ public class ExchangeTaskSourceImpl implements TaskSource {
 	private String username;
 	private String password;
 
-	public ExchangeTaskSourceImpl(String mailHost, String username, String password) {
+	public ExchangeTaskSource(String mailHost, String username, String password) {
 		this.mailHost = mailHost;
 		this.username = username;
 		this.password = password;
 	}
 
-	@Override
-	public Set<TaskDto> getAllTasks() {
-		Set<TaskDto> results = new HashSet<TaskDto>();
+	public Set<ExchangeTaskDto> getAllTasks() {
+		Set<ExchangeTaskDto> results = new HashSet<ExchangeTaskDto>();
 		try {
 			ExchangeCredentials credentials = new WebCredentials(username, password);
 			ExchangeService service = new ExchangeService();
@@ -70,7 +68,7 @@ public class ExchangeTaskSourceImpl implements TaskSource {
 						dueDate = (Date) extendedProperty.getValue();
 					}
 				}
-				TaskDto task = new TaskDto();
+				ExchangeTaskDto task = new ExchangeTaskDto();
 				task.setExchangeId(email.getId().getUniqueId());
 				task.setName(email.getSubject());
 				if (flagValue != null && flagValue == 1) {
@@ -94,19 +92,16 @@ public class ExchangeTaskSourceImpl implements TaskSource {
 		return itemView;
 	}
 
-	@Override
 	public void addTaskAddedListener(Observer observer) {
 		// TODO Auto-generated method stub
 
 	}
 
-	@Override
 	public void addTaskCompletedListener(Observer observer) {
 		// TODO Auto-generated method stub
 
 	}
 
-	@Override
 	public void addTaskDeletedListener(Observer observer) {
 		// TODO Auto-generated method stub
 

@@ -1,27 +1,25 @@
-package com.elasticpath.exchangertmsync.tasksource;
+package com.elasticpath.exchangertmsync.tasksource.rtm.dto;
 
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
-
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang.time.DateFormatUtils;
+import java.util.HashSet;
+import java.util.Set;
 
 public class TaskDto {
 	private String rtmTaskId;
 	private String rtmTimeSeriesId;
-	private String exchangeId;
 	private String name;
 	private Date dueDate;
 	private Byte priority;
 	private boolean completed;
+	private Set<String> tags = new HashSet<String>();
+	private Set<NoteDto> notes = new HashSet<NoteDto>();
 	
 	public String getRtmTaskId() {
 		return rtmTaskId;
 	}
 
-	public void setRtmTaskId(String rtmTaslId) {
-		this.rtmTaskId = rtmTaslId;
+	public void setRtmTaskId(String rtmTaskId) {
+		this.rtmTaskId = rtmTaskId;
 	}
 
 	public String getRtmTimeSeriesId() {
@@ -30,14 +28,6 @@ public class TaskDto {
 
 	public void setRtmTimeSeriesId(String rtmTimeSeriesId) {
 		this.rtmTimeSeriesId = rtmTimeSeriesId;
-	}
-
-	public String getExchangeId() {
-		return exchangeId;
-	}
-
-	public void setExchangeId(String exchangeId) {
-		this.exchangeId = exchangeId;
 	}
 
 	public String getName() {
@@ -64,29 +54,27 @@ public class TaskDto {
 		this.priority = priority;
 	}
 	
-	/**
-	 * @return the completed
-	 */
 	public boolean isCompleted() {
 		return completed;
 	}
 
-	/**
-	 * @param completed the completed to set
-	 */
 	public void setCompleted(boolean completed) {
 		this.completed = completed;
 	}
 
-	public String getSmartAdd() {
-		List<String> components = new ArrayList<String>();
-		components.add(name);
-		if (dueDate != null) {
-			components.add("^" + DateFormatUtils.format(dueDate, "yyyy-MM-dd"));
-		}
-		if (priority != null) {
-			components.add("!" + String.valueOf(priority));
-		}
-		return StringUtils.join(components, " ");
+	public Set<String> getTags() {
+		return tags;
+	}
+
+	public void addTag(final String tag) {
+		tags.add(tag);
+	}
+
+	public Set<NoteDto> getNotes() {
+		return notes;
+	}
+
+	public void addNote(final NoteDto note) {
+		notes.add(note);
 	}
 }
