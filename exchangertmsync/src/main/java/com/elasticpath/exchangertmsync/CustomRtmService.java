@@ -17,6 +17,11 @@ public class CustomRtmService extends RtmService {
 		super(apiKey, sharedSecret, settings);
 	}
 
+	@Override
+	public void addTask(final String timelineId, final String listId, final TaskDto task) throws RtmServerException {
+		throw new UnsupportedOperationException("Make sure to call addTask with an ExchangeTaskDto object.");
+	}
+
 	public void addTask(String timelineId, String listId, ExchangeTaskDto task) throws RtmServerException {
 		// Add email tag
 		task.addTag("email");

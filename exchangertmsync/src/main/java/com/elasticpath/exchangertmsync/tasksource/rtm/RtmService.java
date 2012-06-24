@@ -265,7 +265,6 @@ public class RtmService {
 			TreeMap<String, String> params = new TreeMap<String, String>();
 			params.put("list_id", listId);
 			Document response = parseXML(getRtmMethodUri("rtm.tasks.getList", params));
-			System.out.println(response.asXML());
 			List<Node> taskSeriesNodesList = response.selectNodes("/rsp/tasks/list/taskseries");
 			for (Node taskSeriesNode : taskSeriesNodesList) {
 				Node timeSeriesIdNode = taskSeriesNode.selectSingleNode("@id");
@@ -301,7 +300,7 @@ public class RtmService {
 			Document response = parseXML(getRtmMethodUri("rtm.auth.checkToken"));
 			Node tokenNode = response.selectSingleNode("/rsp/auth/token");
 			Node usernameNode = response.selectSingleNode("/rsp/auth/user/@username");
-			System.out.println("Logged in as " + usernameNode.getText());
+			System.out.println("Logged in to RTM as " + usernameNode.getText());
 			if (tokenNode.getText().equals(settings.getAuthToken())) {
 				return true;
 			}
