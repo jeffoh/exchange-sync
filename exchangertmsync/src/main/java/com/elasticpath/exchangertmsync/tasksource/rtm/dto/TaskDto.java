@@ -11,6 +11,7 @@ public class TaskDto {
 	private String name;
 	private Date dueDate;
 	private Byte priority;
+	private String url;
 	private boolean completed;
 	private Set<String> tags = new HashSet<String>();
 	private Set<NoteDto> notes = new HashSet<NoteDto>();
@@ -65,6 +66,14 @@ public class TaskDto {
 		this.priority = priority;
 	}
 	
+	public String getUrl() {
+		return url;
+	}
+
+	public void setUrl(String url) {
+		this.url = url;
+	}
+
 	public boolean isCompleted() {
 		return completed;
 	}

@@ -21,6 +21,7 @@ public class ExchangeTaskDto extends TaskDto {
 		result.setLastModified(task.getLastModified());
 		result.setName(task.getName());
 		result.setPriority(task.getPriority());
+		result.setUrl(task.getUrl());
 		result.setDueDate(task.getDueDate());
 		result.setCompleted(task.isCompleted());
 		for (String tag : task.getTags()) {

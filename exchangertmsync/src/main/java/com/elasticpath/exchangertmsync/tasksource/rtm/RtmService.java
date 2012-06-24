@@ -191,6 +191,26 @@ public class RtmService {
 	}
 
 	/**
+	 * Update a task's url.
+	 * 
+	 * @param timelineId
+	 * @param listId
+	 * @param task
+	 * @throws RtmServerException
+	 * @throws UnsupportedEncodingException
+	 */
+	public void updateUrl(final String timelineId, final String listId, final TaskDto task)
+			throws RtmServerException, UnsupportedEncodingException {
+		TreeMap<String, String> setUrlParams = new TreeMap<String, String>();
+		setUrlParams.put("task_id", task.getRtmTaskId());
+		setUrlParams.put("taskseries_id", task.getRtmTimeSeriesId());
+		setUrlParams.put("timeline", timelineId);
+		setUrlParams.put("list_id", listId);
+		setUrlParams.put("url", task.getUrl());
+		parseXML(getRtmMethodUri("rtm.tasks.setURL", setUrlParams));
+	}
+
+	/**
 	 * Add tags to a task.
 	 * 
 	 * @param timelineId
