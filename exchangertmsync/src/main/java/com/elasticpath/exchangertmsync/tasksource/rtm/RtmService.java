@@ -7,18 +7,21 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeMap;
 
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang.time.DateFormatUtils;
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
 import org.dom4j.Node;
 import org.dom4j.io.SAXReader;
+import org.joda.time.format.DateTimeFormatter;
+import org.joda.time.format.ISODateTimeFormat;
 
 import com.elasticpath.exchangertmsync.tasksource.rtm.dto.NoteDto;
 import com.elasticpath.exchangertmsync.tasksource.rtm.dto.TaskDto;
@@ -148,7 +151,7 @@ public class RtmService {
 			
 			// Set completed (if required)
 			if (task.isCompleted()) {
-				completeTask(timelineId, listId, task);
+				updateCompleteFlag(timelineId, listId, task);
 			}
 			
 			// Add tags (if required)
@@ -176,15 +179,14 @@ public class RtmService {
 	 * @throws RtmServerException
 	 * @throws UnsupportedEncodingException
 	 */
-	public void updateDueDate(final String timelineId, final String listId,
-			final TaskDto task) throws RtmServerException,
-			UnsupportedEncodingException {
+	public void updateDueDate(final String timelineId, final String listId, final TaskDto task)
+			throws RtmServerException, UnsupportedEncodingException {
 		TreeMap<String, String> setDueDateParams = new TreeMap<String, String>();
 		setDueDateParams.put("task_id", task.getRtmTaskId());
 		setDueDateParams.put("taskseries_id", task.getRtmTimeSeriesId());
 		setDueDateParams.put("timeline", timelineId);
 		setDueDateParams.put("list_id", listId);
-		setDueDateParams.put("due", DateFormatUtils.format(task.getDueDate(), "yyyy-MM-dd") + "T00:00:00Z");
+		setDueDateParams.put("due", convertDateToString(task.getDueDate()));
 		parseXML(getRtmMethodUri("rtm.tasks.setDueDate", setDueDateParams));
 	}
 
@@ -232,21 +234,25 @@ public class RtmService {
 	}
 
 	/**
-	 * Mark a task as completed.
+	 * Mark a task as completed or incomplete.
 	 * 
 	 * @param timelineId
 	 * @param listId
 	 * @param task
 	 * @throws RtmServerException
 	 */
-	public void completeTask(final String timelineId, final String listId, final TaskDto task) throws RtmServerException {
+	public void updateCompleteFlag(final String timelineId, final String listId, final TaskDto task) throws RtmServerException {
 		try {
 			TreeMap<String, String> setCompletedParams = new TreeMap<String, String>();
 			setCompletedParams.put("task_id", task.getRtmTaskId());
 			setCompletedParams.put("taskseries_id", task.getRtmTimeSeriesId());
 			setCompletedParams.put("timeline", timelineId);
 			setCompletedParams.put("list_id", listId);
-			parseXML(getRtmMethodUri("rtm.tasks.complete", setCompletedParams));
+			if (task.isCompleted()) {
+				parseXML(getRtmMethodUri("rtm.tasks.complete", setCompletedParams));
+			} else {
+				parseXML(getRtmMethodUri("rtm.tasks.uncomplete", setCompletedParams));
+			}
 		} catch (UnsupportedEncodingException e) {
 			throw new RuntimeException("Unable to add task", e);
 		}
@@ -268,13 +274,17 @@ public class RtmService {
 			List<Node> taskSeriesNodesList = response.selectNodes("/rsp/tasks/list/taskseries");
 			for (Node taskSeriesNode : taskSeriesNodesList) {
 				Node timeSeriesIdNode = taskSeriesNode.selectSingleNode("@id");
+				Node lastModifiedNode = taskSeriesNode.selectSingleNode("@modified");
 				Node nameNode = taskSeriesNode.selectSingleNode("@name");
 				Node idNode = taskSeriesNode.selectSingleNode("task/@id");
+				Node dueNode = taskSeriesNode.selectSingleNode("task/@due");
 				Node completedNode = taskSeriesNode.selectSingleNode("task/@completed");
 				TaskDto task = new TaskDto();
 				task.setRtmTaskId(idNode.getText());
 				task.setRtmTimeSeriesId(timeSeriesIdNode.getText());
+				task.setLastModified(convertStringToDate(lastModifiedNode.getText()));
 				task.setName(nameNode.getText());
+				task.setDueDate(convertStringToDate(dueNode.getText()));
 				task.setCompleted(StringUtils.isNotEmpty(completedNode.getText()));
 				List<Node> tagNodes = taskSeriesNode.selectNodes("tags/tag");
 				for (Node tagNode : tagNodes) {
@@ -370,5 +380,18 @@ public class RtmService {
 		} catch (UnsupportedEncodingException e) {
 			throw new RuntimeException("Unable to create API signature", e);
 		}
+	}
+	
+	private String convertDateToString(Date theDate) {
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+		return dateFormat.format(theDate) + "T23:00:00Z";
+	}
+
+	private Date convertStringToDate(String theDate) {
+		if (StringUtils.isEmpty(theDate)) {
+			return null;
+		}
+		DateTimeFormatter dateFormat = ISODateTimeFormat.dateTimeNoMillis();
+		return dateFormat.parseDateTime(theDate).toDate();
 	}
 }

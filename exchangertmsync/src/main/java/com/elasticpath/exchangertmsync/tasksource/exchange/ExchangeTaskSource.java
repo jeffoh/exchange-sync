@@ -3,10 +3,12 @@ package com.elasticpath.exchangertmsync.tasksource.exchange;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.TimeZone;
 import java.util.UUID;
 
 import microsoft.exchange.webservices.data.BasePropertySet;
@@ -40,6 +42,7 @@ import com.elasticpath.exchangertmsync.TaskObserver;
 import com.elasticpath.exchangertmsync.tasksource.exchange.dto.ExchangeTaskDto;
 
 public class ExchangeTaskSource {
+	private static final int SUBSCRIPTION_TIMEOUT = 30; // in minutes
 	private static final UUID PROPERTY_SET_TASK = UUID.fromString("00062003-0000-0000-C000-000000000046");
 	private static final int PID_TAG_FLAG_STATUS = 0x1090; // http://msdn.microsoft.com/en-us/library/cc842307
 	private static final int PID_TAG_TASK_DUE_DATE = 0x8105; // http://msdn.microsoft.com/en-us/library/cc839641
@@ -71,7 +74,7 @@ public class ExchangeTaskSource {
 				folderIds,
 				EventType.Modified);
 
-		StreamingSubscriptionConnection connection = new StreamingSubscriptionConnection(service, 1);
+		StreamingSubscriptionConnection connection = new StreamingSubscriptionConnection(service, SUBSCRIPTION_TIMEOUT);
 		connection.addSubscription(streamingsubscription);
 		eventsHandler = new ExchangeEventsHandler();
 		connection.addOnDisconnect(eventsHandler);
@@ -162,6 +165,7 @@ public class ExchangeTaskSource {
 		}
 		ExchangeTaskDto task = new ExchangeTaskDto();
 		task.setExchangeId(email.getId().getUniqueId());
+		task.setLastModified(getCorrectedExchangeTime(email.getLastModifiedTime()));
 		task.setName(email.getSubject());
 		if (flagValue != null && flagValue == 1) {
 			task.setCompleted(true);
@@ -170,6 +174,29 @@ public class ExchangeTaskSource {
 		return task;
 	}
 
+	/**
+	 * There is a bug in the Java EWS in which time is returned in GMT but with local timezone.
+	 * This function fixes those times.
+	 * 
+	 * @param theDate the date returned from EWS
+	 * @return theDate converted to local time
+	 */
+	private Date getCorrectedExchangeTime(Date theDate) {
+		TimeZone tz = Calendar.getInstance().getTimeZone();
+
+		long msFromEpochGmt = theDate.getTime();
+
+		// gives you the current offset in ms from GMT at the current date
+		int offsetFromUTC = tz.getOffset(msFromEpochGmt);
+
+		// create a new calendar in GMT timezone, set to this date and add the
+		// offset
+		Calendar newTime = Calendar.getInstance();
+		newTime.setTime(theDate);
+		newTime.add(Calendar.MILLISECOND, offsetFromUTC);
+		return newTime.getTime();
+	}
+	
 	private PropertySet createEmailPropertySet() {
 		ExtendedPropertyDefinition[] extendedPropertyDefinitions = new ExtendedPropertyDefinition[] { PR_FLAG_STATUS, PR_TASK_DUE_DATE };
 		return new PropertySet(BasePropertySet.FirstClassProperties, extendedPropertyDefinitions);

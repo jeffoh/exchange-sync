@@ -1,5 +1,6 @@
 package com.elasticpath.exchangertmsync;
 
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -37,32 +38,57 @@ public class App {
 			
 			final SyncTasks syncTasks = new SyncTasks() {
 				@Override
-				public void rtmAddTask(ExchangeTaskDto task) {
+				public void rtmTaskAdd(ExchangeTaskDto task) {
 					String timelineId;
 					try {
 						timelineId = rtmService.createTimeline();
 						rtmService.addTask(timelineId, listId, task);
-						System.out.println("Added " + task.getName() + " to RTM.");
+						System.out.println("Added RTM task " + task.getName());
 					} catch (RtmServerException e) {
 						e.printStackTrace();
 					}
 				}
 
 				@Override
-				public void rtmCompleteTask(ExchangeTaskDto task) {
+				protected void rtmTaskUpdateCompletedFlag(ExchangeTaskDto task) {
 					try {
 						String timelineId = rtmService.createTimeline();
-						rtmService.completeTask(timelineId, listId, task);
-						System.out.println("Completed " + task.getName() + " in RTM.");
+						rtmService.updateCompleteFlag(timelineId, listId, task);
+						if (task.isCompleted()) {
+							System.out.println("Marked RTM task as completed for " + task.getName());
+						} else {
+							System.out.println("Marked RTM task as incomplete for " + task.getName());
+						}
 					} catch (RtmServerException e) {
 						e.printStackTrace();
 					}
 				}
 
 				@Override
-				public void exchangeCompleteTask(ExchangeTaskDto task) {
-					// TODO: Complete exchange task
-					System.out.println("Completed " + task.getName() + " in Exchange (not yet implemented).");
+				protected void rtmTaskUpdateDueDate(ExchangeTaskDto task) {
+					try {
+						String timelineId = rtmService.createTimeline();
+						rtmService.updateDueDate(timelineId, listId, task);
+						System.out.println("Updated RTM task due date for " + task.getName());
+					} catch (RtmServerException e) {
+						e.printStackTrace();
+					} catch (UnsupportedEncodingException e) {
+						e.printStackTrace();
+					}
+				}
+
+				@Override
+				protected void exchangeTaskUpdateCompletedFlag(ExchangeTaskDto task) {
+					if (task.isCompleted()) {
+						System.out.println("Marked Exchange task as completed for " + task.getName() + " (not yet implemented).");
+					} else {
+						System.out.println("Marked Exchange task as incomplete for " + task.getName() + " (not yet implemented).");
+					}
+				}
+
+				@Override
+				protected void exchangeTaskUpdateDueDate(ExchangeTaskDto task) {
+					System.out.println("Updated Exchange task due date for " + task.getName() + " (not yet implemented)");
 				}
 			};
 			

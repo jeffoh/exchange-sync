@@ -7,12 +7,15 @@ import java.util.Set;
 public class TaskDto {
 	private String rtmTaskId;
 	private String rtmTimeSeriesId;
+	private Date lastModified;
 	private String name;
 	private Date dueDate;
 	private Byte priority;
 	private boolean completed;
 	private Set<String> tags = new HashSet<String>();
 	private Set<NoteDto> notes = new HashSet<NoteDto>();
+	
+	// NOTE: If you add a new field in this class, remember to modify ExchangeTaskDto.fromTaskDto.
 	
 	public String getRtmTaskId() {
 		return rtmTaskId;
@@ -28,6 +31,14 @@ public class TaskDto {
 
 	public void setRtmTimeSeriesId(String rtmTimeSeriesId) {
 		this.rtmTimeSeriesId = rtmTimeSeriesId;
+	}
+
+	public Date getLastModified() {
+		return lastModified;
+	}
+
+	public void setLastModified(Date lastModified) {
+		this.lastModified = lastModified;
 	}
 
 	public String getName() {

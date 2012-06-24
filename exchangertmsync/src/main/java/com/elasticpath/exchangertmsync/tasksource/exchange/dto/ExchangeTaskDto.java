@@ -18,6 +18,7 @@ public class ExchangeTaskDto extends TaskDto {
 		ExchangeTaskDto result = new ExchangeTaskDto();
 		result.setRtmTaskId(task.getRtmTaskId());
 		result.setRtmTimeSeriesId(task.getRtmTimeSeriesId());
+		result.setLastModified(task.getLastModified());
 		result.setName(task.getName());
 		result.setPriority(task.getPriority());
 		result.setDueDate(task.getDueDate());
