@@ -80,6 +80,7 @@ public class App {
 					}
 				}
 			};
+			exchangeSource.addTaskEventListener(taskObserver);
 
 			// Generate matching pairs of tasks 
 			List<Pair<ExchangeTaskDto, ExchangeTaskDto>> pairs = generatePairs(

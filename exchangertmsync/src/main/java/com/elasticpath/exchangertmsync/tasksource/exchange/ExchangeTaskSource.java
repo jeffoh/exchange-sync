@@ -10,7 +10,6 @@ import java.util.Set;
 import java.util.UUID;
 
 import microsoft.exchange.webservices.data.BasePropertySet;
-import microsoft.exchange.webservices.data.EmailMessageSchema;
 import microsoft.exchange.webservices.data.EventType;
 import microsoft.exchange.webservices.data.ExchangeCredentials;
 import microsoft.exchange.webservices.data.ExchangeService;
@@ -41,9 +40,13 @@ import com.elasticpath.exchangertmsync.TaskObserver;
 import com.elasticpath.exchangertmsync.tasksource.exchange.dto.ExchangeTaskDto;
 
 public class ExchangeTaskSource {
+	private static final UUID PROPERTY_SET_TASK = UUID.fromString("00062003-0000-0000-C000-000000000046");
 	private static final int PID_TAG_FLAG_STATUS = 0x1090; // http://msdn.microsoft.com/en-us/library/cc842307
 	private static final int PID_TAG_TASK_DUE_DATE = 0x8105; // http://msdn.microsoft.com/en-us/library/cc839641
-	private static final UUID PROPERTY_SET_TASK = UUID.fromString("00062003-0000-0000-C000-000000000046");
+	
+	private static final ExtendedPropertyDefinition PR_FLAG_STATUS = new ExtendedPropertyDefinition(PID_TAG_FLAG_STATUS, MapiPropertyType.Integer);
+	private static final ExtendedPropertyDefinition PR_TASK_DUE_DATE = new ExtendedPropertyDefinition(PROPERTY_SET_TASK, PID_TAG_TASK_DUE_DATE, MapiPropertyType.SystemTime);
+
 	private static final boolean ENABLE_DEBUGGING = false;
 
 	private ExchangeService service;
@@ -88,6 +91,7 @@ public class ExchangeTaskSource {
 				args.getException().printStackTrace();
 			} else {
 				try {
+					System.out.println("Reconnected to Exchange streaming service.");
 					connection.open();
 				} catch (ServiceLocalException e) {
 					e.printStackTrace();
@@ -103,10 +107,8 @@ public class ExchangeTaskSource {
 				for (NotificationEvent event : args.getEvents()) {
 					if (event instanceof ItemEvent) {
 						ItemEvent itemEvent = (ItemEvent) event;
-						SearchFilter searchFilter = new SearchFilter.IsEqualTo(EmailMessageSchema.Id, itemEvent.getItemId());
-						ItemView itemView = new ItemView(1);
-						FindItemsResults<Item> items = service.findItems(new FolderId(WellKnownFolderName.Inbox), searchFilter, itemView);
-						for (Item email : items.getItems()) {
+						Item email = Item.bind(service, itemEvent.getItemId(), createEmailPropertySet());
+						if (email != null) {
 							notifyTaskEventListeners(convertExchangeEmailToTaskDto(email));
 						}
 					}
@@ -131,12 +133,11 @@ public class ExchangeTaskSource {
 		Set<ExchangeTaskDto> results = new HashSet<ExchangeTaskDto>();
 		try {
 			// Take a look at http://blogs.planetsoftware.com.au/paul/archive/2010/05/20/exchange-web-services-ews-managed-api-ndash-part-2.aspx
-			ExtendedPropertyDefinition PR_FLAG_STATUS = new ExtendedPropertyDefinition(PID_TAG_FLAG_STATUS, MapiPropertyType.Integer);
-			ExtendedPropertyDefinition PR_TASK_DUE_DATE = new ExtendedPropertyDefinition(PROPERTY_SET_TASK, PID_TAG_TASK_DUE_DATE, MapiPropertyType.SystemTime); // Tag num: 0x802C0040
 			SearchFilterCollection searchFilterCollection = new SearchFilterCollection(LogicalOperator.Or);
 			searchFilterCollection.add(new SearchFilter.IsEqualTo(PR_FLAG_STATUS, "1"));
 			searchFilterCollection.add(new SearchFilter.IsEqualTo(PR_FLAG_STATUS, "2"));
-			ItemView itemView = createItemView(100, PR_FLAG_STATUS, PR_TASK_DUE_DATE);
+			ItemView itemView = new ItemView(100);
+			itemView.setPropertySet(createEmailPropertySet());
 			FindItemsResults<Item> items = service.findItems(new FolderId(WellKnownFolderName.Inbox), searchFilterCollection, itemView);
 			for (Item email : items.getItems()) {
 				results.add(convertExchangeEmailToTaskDto(email));
@@ -169,11 +170,9 @@ public class ExchangeTaskSource {
 		return task;
 	}
 
-	private ItemView createItemView(int maxResults, ExtendedPropertyDefinition... extendedFieldsToReturn) {
-		ItemView itemView = new ItemView(maxResults);
-		PropertySet extendedPropertySet = new PropertySet(BasePropertySet.FirstClassProperties, extendedFieldsToReturn); //BasePropertySet.IdOnly?
-		itemView.setPropertySet(extendedPropertySet);
-		return itemView;
+	private PropertySet createEmailPropertySet() {
+		ExtendedPropertyDefinition[] extendedPropertyDefinitions = new ExtendedPropertyDefinition[] { PR_FLAG_STATUS, PR_TASK_DUE_DATE };
+		return new PropertySet(BasePropertySet.FirstClassProperties, extendedPropertyDefinitions);
 	}
 
 	public void addTaskEventListener(final TaskObserver observer) {
