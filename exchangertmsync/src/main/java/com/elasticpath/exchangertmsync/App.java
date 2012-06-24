@@ -34,7 +34,7 @@ public class App {
 			final String listId = rtmService.getIdForListName(settings.getRtmListName());
 			
 			// Initialize exchange source
-			ExchangeTaskSource exchangeSource = new ExchangeTaskSource(settings.getExchangeHost(), settings.getExchangeUsername(), settings.getExchangePassword());
+			final ExchangeTaskSource exchangeSource = new ExchangeTaskSource(settings.getExchangeHost(), settings.getExchangeUsername(), settings.getExchangePassword());
 			
 			final SyncTasks syncTasks = new SyncTasks() {
 				@Override
@@ -79,16 +79,26 @@ public class App {
 
 				@Override
 				protected void exchangeTaskUpdateCompletedFlag(ExchangeTaskDto task) {
-					if (task.isCompleted()) {
-						System.out.println("Marked Exchange task as completed for " + task.getName() + " (not yet implemented).");
-					} else {
-						System.out.println("Marked Exchange task as incomplete for " + task.getName() + " (not yet implemented).");
+					try {
+						exchangeSource.updateCompletedFlag(task);
+						if (task.isCompleted()) {
+							System.out.println("Marked Exchange task as completed for " + task.getName());
+						} else {
+							System.out.println("Marked Exchange task as incomplete for " + task.getName());
+						}
+					} catch (Exception e) {
+						e.printStackTrace();
 					}
 				}
 
 				@Override
 				protected void exchangeTaskUpdateDueDate(ExchangeTaskDto task) {
-					System.out.println("Updated Exchange task due date for " + task.getName() + " (not yet implemented)");
+					try {
+						exchangeSource.updateDueDate(task);
+						System.out.println("Updated Exchange task due date for " + task.getName());
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
 				}
 			};
 			

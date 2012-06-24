@@ -12,6 +12,7 @@ import java.util.TimeZone;
 import java.util.UUID;
 
 import microsoft.exchange.webservices.data.BasePropertySet;
+import microsoft.exchange.webservices.data.ConflictResolutionMode;
 import microsoft.exchange.webservices.data.EventType;
 import microsoft.exchange.webservices.data.ExchangeCredentials;
 import microsoft.exchange.webservices.data.ExchangeService;
@@ -21,6 +22,7 @@ import microsoft.exchange.webservices.data.FindItemsResults;
 import microsoft.exchange.webservices.data.FolderId;
 import microsoft.exchange.webservices.data.Item;
 import microsoft.exchange.webservices.data.ItemEvent;
+import microsoft.exchange.webservices.data.ItemId;
 import microsoft.exchange.webservices.data.ItemView;
 import microsoft.exchange.webservices.data.LogicalOperator;
 import microsoft.exchange.webservices.data.MapiPropertyType;
@@ -46,6 +48,8 @@ public class ExchangeTaskSource {
 	private static final UUID PROPERTY_SET_TASK = UUID.fromString("00062003-0000-0000-C000-000000000046");
 	private static final int PID_TAG_FLAG_STATUS = 0x1090; // http://msdn.microsoft.com/en-us/library/cc842307
 	private static final int PID_TAG_TASK_DUE_DATE = 0x8105; // http://msdn.microsoft.com/en-us/library/cc839641
+	private static final int PID_TAG_FLAG_VALUE_FOLLOWUP_COMPLETE = 1;
+	private static final int PID_TAG_FLAG_VALUE_FOLLOWUP_FLAGGED = 2;
 	
 	private static final ExtendedPropertyDefinition PR_FLAG_STATUS = new ExtendedPropertyDefinition(PID_TAG_FLAG_STATUS, MapiPropertyType.Integer);
 	private static final ExtendedPropertyDefinition PR_TASK_DUE_DATE = new ExtendedPropertyDefinition(PROPERTY_SET_TASK, PID_TAG_TASK_DUE_DATE, MapiPropertyType.SystemTime);
@@ -167,7 +171,7 @@ public class ExchangeTaskSource {
 		task.setExchangeId(email.getId().getUniqueId());
 		task.setLastModified(getCorrectedExchangeTime(email.getLastModifiedTime()));
 		task.setName(email.getSubject());
-		if (flagValue != null && flagValue == 1) {
+		if (flagValue != null && flagValue == PID_TAG_FLAG_VALUE_FOLLOWUP_COMPLETE) {
 			task.setCompleted(true);
 		}
 		task.setDueDate(dueDate);
@@ -204,5 +208,31 @@ public class ExchangeTaskSource {
 
 	public void addTaskEventListener(final TaskObserver observer) {
 		eventsHandler.addTaskEventListener(observer);
+	}
+	
+	public void updateDueDate(final ExchangeTaskDto task) throws Exception {
+		ItemId itemId = new ItemId(task.getExchangeId());
+		Item email = Item.bind(service, itemId, createEmailPropertySet());
+		for (ExtendedProperty extendedProperty : email.getExtendedProperties()) {
+			if (extendedProperty.getPropertyDefinition().getId() != null && extendedProperty.getPropertyDefinition().getId() == PID_TAG_TASK_DUE_DATE) {
+				extendedProperty.setValue(task.getDueDate());
+			}
+		}
+		email.update(ConflictResolutionMode.NeverOverwrite);
+	}
+
+	public void updateCompletedFlag(final ExchangeTaskDto task) throws Exception {
+		ItemId itemId = new ItemId(task.getExchangeId());
+		Item email = Item.bind(service, itemId, createEmailPropertySet());
+		for (ExtendedProperty extendedProperty : email.getExtendedProperties()) {
+			if (extendedProperty.getPropertyDefinition().getTag() != null && extendedProperty.getPropertyDefinition().getTag() == 16) {
+				if (task.isCompleted()) {
+					extendedProperty.setValue(PID_TAG_FLAG_VALUE_FOLLOWUP_COMPLETE);
+				} else {
+					extendedProperty.setValue(PID_TAG_FLAG_VALUE_FOLLOWUP_FLAGGED);
+				}
+			}
+		}
+		email.update(ConflictResolutionMode.NeverOverwrite);
 	}
 }
