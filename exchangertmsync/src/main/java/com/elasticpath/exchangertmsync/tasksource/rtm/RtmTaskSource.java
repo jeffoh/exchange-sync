@@ -26,7 +26,7 @@ import org.joda.time.format.ISODateTimeFormat;
 import com.elasticpath.exchangertmsync.tasksource.rtm.dto.NoteDto;
 import com.elasticpath.exchangertmsync.tasksource.rtm.dto.TaskDto;
 
-public class RtmService {
+public class RtmTaskSource {
 	private static final String REST_HOST = "api.rememberthemilk.com";
 	private static final String REST_AUTH_PATH = "/services/auth/";
 	private static final String REST_METHOD_PATH = "/services/rest/";
@@ -35,7 +35,7 @@ public class RtmService {
 	private String sharedSecret;
 	private RtmSettings settings;
 
-	public RtmService(final String apiKey, final String sharedSecret, final RtmSettings settings) {
+	public RtmTaskSource(final String apiKey, final String sharedSecret, final RtmSettings settings) {
 		this.apiKey = apiKey;
 		this.sharedSecret = sharedSecret;
 		this.settings = settings;

@@ -5,15 +5,15 @@ import java.util.List;
 
 import com.elasticpath.exchangertmsync.tasksource.exchange.dto.ExchangeTaskDto;
 import com.elasticpath.exchangertmsync.tasksource.rtm.RtmServerException;
-import com.elasticpath.exchangertmsync.tasksource.rtm.RtmService;
+import com.elasticpath.exchangertmsync.tasksource.rtm.RtmTaskSource;
 import com.elasticpath.exchangertmsync.tasksource.rtm.RtmSettings;
 import com.elasticpath.exchangertmsync.tasksource.rtm.dto.NoteDto;
 import com.elasticpath.exchangertmsync.tasksource.rtm.dto.TaskDto;
 
-public class CustomRtmService extends RtmService {
+public class CustomRtmTaskSource extends RtmTaskSource {
 	private static final String EXCHANGE_ID_NOTE_TITLE = "ExchangeID";
 
-	public CustomRtmService(final String apiKey, final String sharedSecret, final RtmSettings settings) {
+	public CustomRtmTaskSource(final String apiKey, final String sharedSecret, final RtmSettings settings) {
 		super(apiKey, sharedSecret, settings);
 	}
 

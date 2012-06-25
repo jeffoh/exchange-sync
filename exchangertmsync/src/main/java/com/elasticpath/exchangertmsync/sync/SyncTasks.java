@@ -1,6 +1,16 @@
-package com.elasticpath.exchangertmsync;
+package com.elasticpath.exchangertmsync.sync;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import com.elasticpath.exchangertmsync.CustomRtmTaskSource;
+import com.elasticpath.exchangertmsync.Pair;
+import com.elasticpath.exchangertmsync.tasksource.exchange.ExchangeTaskSource;
 import com.elasticpath.exchangertmsync.tasksource.exchange.dto.ExchangeTaskDto;
+import com.elasticpath.exchangertmsync.tasksource.rtm.RtmServerException;
 
 public abstract class SyncTasks {
 	
@@ -36,6 +46,31 @@ public abstract class SyncTasks {
 				}
 			}
 		}
+	}
+	
+	public void syncAll() {
+		// Generate matching pairs of tasks 
+		List<Pair<ExchangeTaskDto, ExchangeTaskDto>> pairs = generatePairs();
+		
+		// Create/complete/delete as required
+		for (Pair<ExchangeTaskDto, ExchangeTaskDto> pair : pairs) {
+			sync(pair.getLeft(), pair.getRight());
+		}
+	}
+
+	protected abstract List<Pair<ExchangeTaskDto, ExchangeTaskDto>> generatePairs();
+
+	public Map<String, ExchangeTaskDto> generateExchangeIdMap(Collection<ExchangeTaskDto> rtmTasks) {
+		Map<String, ExchangeTaskDto> results = new HashMap<String, ExchangeTaskDto>();
+		for (ExchangeTaskDto task : rtmTasks) {
+			results.put(task.getExchangeId(), task);
+		}
+		return results;
+	}
+
+	public Pair<ExchangeTaskDto, ExchangeTaskDto> generatePairForExchangeTask(Map<String, ExchangeTaskDto> rtmTaskIdMap, ExchangeTaskDto exchangeTask) {
+		ExchangeTaskDto rtmTask = rtmTaskIdMap.get(exchangeTask.getExchangeId());
+		return new Pair<ExchangeTaskDto, ExchangeTaskDto>(rtmTask, exchangeTask);
 	}
 	
 	protected abstract void rtmTaskAdd(ExchangeTaskDto task);
