@@ -1,16 +1,14 @@
 package com.elasticpath.exchangertmsync.sync;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.elasticpath.exchangertmsync.CustomRtmTaskSource;
+import org.apache.commons.lang.ObjectUtils;
+
 import com.elasticpath.exchangertmsync.Pair;
-import com.elasticpath.exchangertmsync.tasksource.exchange.ExchangeTaskSource;
 import com.elasticpath.exchangertmsync.tasksource.exchange.dto.ExchangeTaskDto;
-import com.elasticpath.exchangertmsync.tasksource.rtm.RtmServerException;
 
 public abstract class SyncTasks {
 	
@@ -30,7 +28,7 @@ public abstract class SyncTasks {
 					rtmTask.setCompleted(exchangeTask.isCompleted());
 					rtmTaskUpdateCompletedFlag(rtmTask);
 				}
-				if (!exchangeTask.getDueDate().equals(rtmTask.getDueDate())) {
+				if (!ObjectUtils.equals(exchangeTask.getDueDate(), rtmTask.getDueDate())) {
 					rtmTask.setDueDate(exchangeTask.getDueDate());
 					rtmTaskUpdateDueDate(rtmTask);
 				}
@@ -40,7 +38,7 @@ public abstract class SyncTasks {
 					exchangeTask.setCompleted(rtmTask.isCompleted());
 					exchangeTaskUpdateCompletedFlag(exchangeTask);
 				}
-				if (!exchangeTask.getDueDate().equals(rtmTask.getDueDate())) {
+				if (!ObjectUtils.equals(exchangeTask.getDueDate(), rtmTask.getDueDate())) {
 					exchangeTask.setDueDate(rtmTask.getDueDate());
 					exchangeTaskUpdateDueDate(exchangeTask);
 				}

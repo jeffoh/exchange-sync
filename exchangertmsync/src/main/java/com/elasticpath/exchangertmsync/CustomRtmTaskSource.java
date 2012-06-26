@@ -12,6 +12,7 @@ import com.elasticpath.exchangertmsync.tasksource.rtm.dto.TaskDto;
 
 public class CustomRtmTaskSource extends RtmTaskSource {
 	private static final String EXCHANGE_ID_NOTE_TITLE = "ExchangeID";
+	private static final String ORIGINAL_SUBJECT_NOTE_TITLE = "Original Email Subject";
 
 	public CustomRtmTaskSource(final String apiKey, final String sharedSecret, final RtmSettings settings) {
 		super(apiKey, sharedSecret, settings);
@@ -25,17 +26,23 @@ public class CustomRtmTaskSource extends RtmTaskSource {
 	public void addTask(String timelineId, String listId, ExchangeTaskDto task) throws RtmServerException {
 		// Add email tag
 		task.addTag("email");
-		
+
 		// Add ExchangeID note
-		NoteDto note = new NoteDto();
-		note.setTitle(EXCHANGE_ID_NOTE_TITLE);
-		note.setBody(task.getExchangeId());
-		task.addNote(note);
-		
+		NoteDto exchangeIdNote = new NoteDto();
+		exchangeIdNote.setTitle(EXCHANGE_ID_NOTE_TITLE);
+		exchangeIdNote.setBody(task.getExchangeId());
+		task.addNote(exchangeIdNote);
+
+		// Add Original Subject note
+		NoteDto originalSubjectNote = new NoteDto();
+		originalSubjectNote.setTitle(ORIGINAL_SUBJECT_NOTE_TITLE);
+		originalSubjectNote.setBody(task.getName());
+		task.addNote(originalSubjectNote);
+
 		// Add task
 		super.addTask(timelineId, listId, task);
 	}
-	
+
 	public List<ExchangeTaskDto> getTasksWithExchangeId(final String listId) throws RtmServerException {
 		List<ExchangeTaskDto> results = new ArrayList<ExchangeTaskDto>();
 		for (TaskDto task : super.getTasks(listId)) {

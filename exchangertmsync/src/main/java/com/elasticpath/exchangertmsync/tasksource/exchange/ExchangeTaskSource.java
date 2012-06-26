@@ -2,11 +2,9 @@ package com.elasticpath.exchangertmsync.tasksource.exchange;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.UUID;
@@ -18,8 +16,13 @@ import microsoft.exchange.webservices.data.ExchangeCredentials;
 import microsoft.exchange.webservices.data.ExchangeService;
 import microsoft.exchange.webservices.data.ExtendedProperty;
 import microsoft.exchange.webservices.data.ExtendedPropertyDefinition;
+import microsoft.exchange.webservices.data.FindFoldersResults;
 import microsoft.exchange.webservices.data.FindItemsResults;
+import microsoft.exchange.webservices.data.Folder;
 import microsoft.exchange.webservices.data.FolderId;
+import microsoft.exchange.webservices.data.FolderSchema;
+import microsoft.exchange.webservices.data.FolderTraversal;
+import microsoft.exchange.webservices.data.FolderView;
 import microsoft.exchange.webservices.data.Item;
 import microsoft.exchange.webservices.data.ItemEvent;
 import microsoft.exchange.webservices.data.ItemId;
@@ -50,9 +53,10 @@ public class ExchangeTaskSource {
 	private static final int PID_TAG_TASK_DUE_DATE = 0x8105; // http://msdn.microsoft.com/en-us/library/cc839641
 	private static final int PR_FLAG_STATUS_FOLLOWUP_COMPLETE = 1;
 	private static final int PR_FLAG_STATUS_FOLLOWUP_FLAGGED = 2;
-	
+
 	private static final ExtendedPropertyDefinition PR_FLAG_STATUS = new ExtendedPropertyDefinition(PID_TAG_FLAG_STATUS, MapiPropertyType.Integer);
 	private static final ExtendedPropertyDefinition PR_TASK_DUE_DATE = new ExtendedPropertyDefinition(PROPERTY_SET_TASK, PID_TAG_TASK_DUE_DATE, MapiPropertyType.SystemTime);
+	private static final ExtendedPropertyDefinition PR_ALL_FOLDERS = new ExtendedPropertyDefinition(13825, MapiPropertyType.Integer);
 
 	private static final boolean ENABLE_DEBUGGING = false;
 
@@ -69,15 +73,10 @@ public class ExchangeTaskSource {
 			e.printStackTrace();
 		}
 		service.setTraceEnabled(ENABLE_DEBUGGING);
-		
+
 		// Setup a streaming subscription
 		// http://blogs.msdn.com/b/exchangedev/archive/2010/12/22/working-with-streaming-notifications-by-using-the-ews-managed-api.aspx
-		List<FolderId> folderIds = new ArrayList<FolderId>();
-		folderIds.add(new FolderId(WellKnownFolderName.Inbox));
-		StreamingSubscription streamingsubscription = service.subscribeToStreamingNotifications(
-				folderIds,
-				EventType.Modified);
-
+		StreamingSubscription streamingsubscription = service.subscribeToStreamingNotificationsOnAllFolders(EventType.Modified);
 		StreamingSubscriptionConnection connection = new StreamingSubscriptionConnection(service, SUBSCRIPTION_TIMEOUT);
 		connection.addSubscription(streamingsubscription);
 		eventsHandler = new ExchangeEventsHandler();
@@ -86,14 +85,14 @@ public class ExchangeTaskSource {
 		connection.addOnSubscriptionError(eventsHandler);
 		connection.open();
 	}
-	
+
 	private class ExchangeEventsHandler implements ISubscriptionErrorDelegate, INotificationEventDelegate {
-		
+
 		private Set<TaskObserver> taskEventObservers = new HashSet<TaskObserver>();
-		
+
 		@Override
 		public void subscriptionErrorDelegate(Object sender, SubscriptionErrorEventArgs args) {
-			StreamingSubscriptionConnection connection = (StreamingSubscriptionConnection) sender; 
+			StreamingSubscriptionConnection connection = (StreamingSubscriptionConnection) sender;
 			if (args.getException() != null) {
 				args.getException().printStackTrace();
 			} else {
@@ -112,6 +111,7 @@ public class ExchangeTaskSource {
 		public void notificationEventDelegate(Object sender, NotificationEventArgs args) {
 			try {
 				for (NotificationEvent event : args.getEvents()) {
+					System.out.println("Received event: " + event.getEventType());
 					if (event instanceof ItemEvent) {
 						ItemEvent itemEvent = (ItemEvent) event;
 						Item email = Item.bind(service, itemEvent.getItemId(), createEmailPropertySet());
@@ -124,11 +124,11 @@ public class ExchangeTaskSource {
 				e.printStackTrace();
 			}
 		}
-		
+
 		public void addTaskEventListener(final TaskObserver observer) {
 			taskEventObservers.add(observer);
 		}
-		
+
 		public void notifyTaskEventListeners(final ExchangeTaskDto task) {
 			for (TaskObserver observer : taskEventObservers) {
 				observer.taskChanged(task);
@@ -145,7 +145,7 @@ public class ExchangeTaskSource {
 			searchFilterCollection.add(new SearchFilter.IsEqualTo(PR_FLAG_STATUS, "2"));
 			ItemView itemView = new ItemView(100);
 			itemView.setPropertySet(createEmailPropertySet());
-			FindItemsResults<Item> items = service.findItems(new FolderId(WellKnownFolderName.Inbox), searchFilterCollection, itemView);
+			FindItemsResults<Item> items = getAllItemsFolder().findItems(searchFilterCollection, itemView);
 			for (Item email : items.getItems()) {
 				results.add(convertExchangeEmailToTaskDto(email));
 			}
@@ -156,6 +156,26 @@ public class ExchangeTaskSource {
 		}
 		return results;
 	}
+	
+	private Folder getAllItemsFolder() throws Exception {
+		FolderId rootFolderId = new FolderId(WellKnownFolderName.Root);
+		FolderView folderView = new FolderView(1000);
+		folderView.setTraversal(FolderTraversal.Shallow);
+
+		SearchFilter searchFilter1 = new SearchFilter.IsEqualTo(PR_ALL_FOLDERS, "2");
+		SearchFilter searchFilter2 = new SearchFilter.IsEqualTo(FolderSchema.DisplayName, "allitems");
+		SearchFilter.SearchFilterCollection searchFilterCollection = new SearchFilter.SearchFilterCollection(LogicalOperator.And);
+		searchFilterCollection.add(searchFilter1);
+		searchFilterCollection.add(searchFilter2);
+
+		FindFoldersResults findFoldersResults = service.findFolders(
+				rootFolderId, searchFilterCollection, folderView);
+
+		if (findFoldersResults.getFolders().size() == 0) {
+			return null;
+		}
+		return findFoldersResults.getFolders().iterator().next();
+	}
 
 	public ExchangeTaskDto convertExchangeEmailToTaskDto(Item email) throws ServiceLocalException {
 		Integer flagValue = null;
@@ -163,6 +183,7 @@ public class ExchangeTaskSource {
 		for (ExtendedProperty extendedProperty : email.getExtendedProperties()) {
 			if (extendedProperty.getPropertyDefinition().getTag() != null && extendedProperty.getPropertyDefinition().getTag() == 16) {
 				flagValue = (Integer) extendedProperty.getValue();
+				System.out.println(email.getSubject() + ": " + flagValue);
 			} else if (extendedProperty.getPropertyDefinition().getId() != null && extendedProperty.getPropertyDefinition().getId() == PID_TAG_TASK_DUE_DATE) {
 				dueDate = (Date) extendedProperty.getValue();
 			}
@@ -181,7 +202,7 @@ public class ExchangeTaskSource {
 	/**
 	 * There is a bug in the Java EWS in which time is returned in GMT but with local timezone.
 	 * This function fixes those times.
-	 * 
+	 *
 	 * @param theDate the date returned from EWS
 	 * @return theDate converted to local time
 	 */
@@ -200,7 +221,7 @@ public class ExchangeTaskSource {
 		newTime.add(Calendar.MILLISECOND, offsetFromUTC);
 		return newTime.getTime();
 	}
-	
+
 	private PropertySet createEmailPropertySet() {
 		ExtendedPropertyDefinition[] extendedPropertyDefinitions = new ExtendedPropertyDefinition[] { PR_FLAG_STATUS, PR_TASK_DUE_DATE };
 		return new PropertySet(BasePropertySet.FirstClassProperties, extendedPropertyDefinitions);
@@ -209,11 +230,15 @@ public class ExchangeTaskSource {
 	public void addTaskEventListener(final TaskObserver observer) {
 		eventsHandler.addTaskEventListener(observer);
 	}
-	
+
 	public void updateDueDate(final ExchangeTaskDto task) throws Exception {
 		ItemId itemId = new ItemId(task.getExchangeId());
 		Item email = Item.bind(service, itemId, createEmailPropertySet());
-		email.setExtendedProperty(PR_TASK_DUE_DATE, task.getDueDate());
+		if (task.getDueDate() == null) {
+			email.removeExtendedProperty(PR_TASK_DUE_DATE);
+		} else {
+			email.setExtendedProperty(PR_TASK_DUE_DATE, task.getDueDate());
+		}
 		email.update(ConflictResolutionMode.NeverOverwrite);
 	}
 
