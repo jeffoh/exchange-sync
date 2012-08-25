@@ -12,11 +12,11 @@ import com.elasticpath.exchangertmsync.tasksource.exchange.dto.ExchangeTaskDto;
 import com.elasticpath.exchangertmsync.tasksource.rtm.RtmServerException;
 
 public class CustomSyncTasks extends SyncTasks {
-	
+
 	private CustomRtmTaskSource rtmSource;
 	private ExchangeTaskSource exchangeSource;
 	private String defaultRtmListId;
-	
+
 	public CustomSyncTasks(CustomRtmTaskSource rtmSource, ExchangeTaskSource exchangeSource, String defaultRtmListId) {
 		this.rtmSource = rtmSource;
 		this.exchangeSource = exchangeSource;
@@ -82,7 +82,7 @@ public class CustomSyncTasks extends SyncTasks {
 	@Override
 	protected void exchangeTaskUpdateCompletedFlag(ExchangeTaskDto task) {
 		try {
-			exchangeSource.updateCompletedFlag(task);
+//			exchangeSource.updateCompletedFlag(task);
 			if (task.isCompleted()) {
 				System.out.println("Marked Exchange task as completed for " + task.getName());
 			} else {
@@ -96,7 +96,7 @@ public class CustomSyncTasks extends SyncTasks {
 	@Override
 	protected void exchangeTaskUpdateDueDate(ExchangeTaskDto task) {
 		try {
-			exchangeSource.updateDueDate(task);
+//			exchangeSource.updateDueDate(task);
 			System.out.println("Updated Exchange task due date for " + task.getName());
 		} catch (Exception e) {
 			e.printStackTrace();

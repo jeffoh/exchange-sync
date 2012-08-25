@@ -285,7 +285,7 @@ public class RtmTaskSource {
 	 * @return a list of tasks
 	 * @throws RtmServerException
 	 */
-	public List<TaskDto> getTasks(final String listId) throws RtmServerException {
+	public List<TaskDto> getAllTasks(final String listId) throws RtmServerException {
 		try {
 			List<TaskDto> results = new ArrayList<TaskDto>();
 			TreeMap<String, String> params = new TreeMap<String, String>();

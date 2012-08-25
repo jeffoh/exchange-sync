@@ -2,6 +2,7 @@ package com.elasticpath.exchangertmsync.tasksource.exchange;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashSet;
@@ -47,18 +48,42 @@ import com.elasticpath.exchangertmsync.TaskObserver;
 import com.elasticpath.exchangertmsync.tasksource.exchange.dto.ExchangeTaskDto;
 
 public class ExchangeTaskSource {
+	private static final int MAX_EXCHANGE_TASKS = 1000;
 	private static final int SUBSCRIPTION_TIMEOUT = 30; // in minutes
+	private static final boolean ENABLE_DEBUGGING = false;
+
 	private static final UUID PROPERTY_SET_TASK = UUID.fromString("00062003-0000-0000-C000-000000000046");
+	private static final UUID PROPERTY_SET_COMMON = UUID.fromString("00062008-0000-0000-C000-000000000046");
+
 	private static final int PID_TAG_FLAG_STATUS = 0x1090; // http://msdn.microsoft.com/en-us/library/cc842307
-	private static final int PID_TAG_TASK_DUE_DATE = 0x8105; // http://msdn.microsoft.com/en-us/library/cc839641
-	private static final int PR_FLAG_STATUS_FOLLOWUP_COMPLETE = 1;
-	private static final int PR_FLAG_STATUS_FOLLOWUP_FLAGGED = 2;
+	private static final int PID_LID_FLAG_REQUEST = 0x8018; // http://msdn.microsoft.com/en-us/library/cc815496
+	private static final int PID_LID_TODO_ORDINAL_DATE = 0x8021; // http://msdn.microsoft.com/en-us/library/cc842320
+	private static final int PID_LID_TODO_SUB_ORDINAL = 0x8022; // http://msdn.microsoft.com/en-us/library/cc839908
+	private static final int PID_LID_TASK_COMPLETE = 0x8023; // http://msdn.microsoft.com/en-us/library/cc839514
+	private static final int PID_LID_TASK_STATUS = 0x8024; // http://msdn.microsoft.com/en-us/library/cc842120
+	private static final int PID_LID_TODO_TITLE = 0x8025; // http://msdn.microsoft.com/en-us/library/cc842303
+	private static final int PID_LID_TASK_START_DATE = 0x802A; // http://msdn.microsoft.com/en-us/library/cc815922
+	private static final int PID_LID_TASK_DUE_DATE = 0x8105; // http://msdn.microsoft.com/en-us/library/cc839641
+	private static final int PID_LID_TASK_DATE_COMPLETED = 0x810F; // http://msdn.microsoft.com/en-us/library/cc815753
+	private static final int PID_LID_PERCENT_COMPLETE = 0x802F; // http://msdn.microsoft.com/en-us/library/cc839932
+	private static final int PID_LID_TASK_MODE = 0x8161; // http://msdn.microsoft.com/en-us/library/cc765719
 
 	private static final ExtendedPropertyDefinition PR_FLAG_STATUS = new ExtendedPropertyDefinition(PID_TAG_FLAG_STATUS, MapiPropertyType.Integer);
-	private static final ExtendedPropertyDefinition PR_TASK_DUE_DATE = new ExtendedPropertyDefinition(PROPERTY_SET_TASK, PID_TAG_TASK_DUE_DATE, MapiPropertyType.SystemTime);
+	private static final ExtendedPropertyDefinition PR_FLAG_REQUEST = new ExtendedPropertyDefinition(PROPERTY_SET_COMMON, PID_LID_FLAG_REQUEST, MapiPropertyType.String);
+	private static final ExtendedPropertyDefinition PR_TODO_ORDINAL_DATE = new ExtendedPropertyDefinition(PROPERTY_SET_COMMON, PID_LID_TODO_ORDINAL_DATE, MapiPropertyType.SystemTime);
+	private static final ExtendedPropertyDefinition PR_TODO_SUB_ORDINAL = new ExtendedPropertyDefinition(PROPERTY_SET_COMMON, PID_LID_TODO_SUB_ORDINAL, MapiPropertyType.String);
+	private static final ExtendedPropertyDefinition PR_TASK_COMPLETE = new ExtendedPropertyDefinition(PROPERTY_SET_COMMON, PID_LID_TASK_COMPLETE, MapiPropertyType.Boolean);
+	private static final ExtendedPropertyDefinition PR_TASK_STATUS = new ExtendedPropertyDefinition(PROPERTY_SET_COMMON, PID_LID_TASK_STATUS, MapiPropertyType.Integer);
+	private static final ExtendedPropertyDefinition PR_TODO_TITLE = new ExtendedPropertyDefinition(PROPERTY_SET_COMMON, PID_LID_TODO_TITLE, MapiPropertyType.String);
+	private static final ExtendedPropertyDefinition PR_TASK_START_DATE = new ExtendedPropertyDefinition(PROPERTY_SET_COMMON, PID_LID_TASK_START_DATE, MapiPropertyType.SystemTime);
+	private static final ExtendedPropertyDefinition PR_TASK_DUE_DATE = new ExtendedPropertyDefinition(PROPERTY_SET_TASK, PID_LID_TASK_DUE_DATE, MapiPropertyType.SystemTime);
+	private static final ExtendedPropertyDefinition PR_TASK_DATE_COMPLETED = new ExtendedPropertyDefinition(PROPERTY_SET_COMMON, PID_LID_TASK_DATE_COMPLETED, MapiPropertyType.SystemTime);
+	private static final ExtendedPropertyDefinition PR_PERCENT_COMPLETE = new ExtendedPropertyDefinition(PROPERTY_SET_COMMON, PID_LID_PERCENT_COMPLETE, MapiPropertyType.Double);
+	private static final ExtendedPropertyDefinition PR_TASK_MODE = new ExtendedPropertyDefinition(PROPERTY_SET_COMMON, PID_LID_TASK_MODE, MapiPropertyType.Integer);
 	private static final ExtendedPropertyDefinition PR_ALL_FOLDERS = new ExtendedPropertyDefinition(13825, MapiPropertyType.Integer);
 
-	private static final boolean ENABLE_DEBUGGING = false;
+	private static final int PR_FLAG_STATUS_FOLLOWUP_COMPLETE = 1;
+	private static final int PR_FLAG_STATUS_FOLLOWUP_FLAGGED = 2;
 
 	private ExchangeService service;
 	private ExchangeEventsHandler eventsHandler;
@@ -111,7 +136,6 @@ public class ExchangeTaskSource {
 		public void notificationEventDelegate(Object sender, NotificationEventArgs args) {
 			try {
 				for (NotificationEvent event : args.getEvents()) {
-					System.out.println("Received event: " + event.getEventType());
 					if (event instanceof ItemEvent) {
 						ItemEvent itemEvent = (ItemEvent) event;
 						Item email = Item.bind(service, itemEvent.getItemId(), createEmailPropertySet());
@@ -143,10 +167,11 @@ public class ExchangeTaskSource {
 			SearchFilterCollection searchFilterCollection = new SearchFilterCollection(LogicalOperator.Or);
 			searchFilterCollection.add(new SearchFilter.IsEqualTo(PR_FLAG_STATUS, "1"));
 			searchFilterCollection.add(new SearchFilter.IsEqualTo(PR_FLAG_STATUS, "2"));
-			ItemView itemView = new ItemView(100);
+			ItemView itemView = new ItemView(MAX_EXCHANGE_TASKS);
 			itemView.setPropertySet(createEmailPropertySet());
 			FindItemsResults<Item> items = getAllItemsFolder().findItems(searchFilterCollection, itemView);
 			for (Item email : items.getItems()) {
+
 				results.add(convertExchangeEmailToTaskDto(email));
 			}
 		} catch (URISyntaxException e) {
@@ -156,7 +181,7 @@ public class ExchangeTaskSource {
 		}
 		return results;
 	}
-	
+
 	private Folder getAllItemsFolder() throws Exception {
 		FolderId rootFolderId = new FolderId(WellKnownFolderName.Root);
 		FolderView folderView = new FolderView(1000);
@@ -183,8 +208,7 @@ public class ExchangeTaskSource {
 		for (ExtendedProperty extendedProperty : email.getExtendedProperties()) {
 			if (extendedProperty.getPropertyDefinition().getTag() != null && extendedProperty.getPropertyDefinition().getTag() == 16) {
 				flagValue = (Integer) extendedProperty.getValue();
-				System.out.println(email.getSubject() + ": " + flagValue);
-			} else if (extendedProperty.getPropertyDefinition().getId() != null && extendedProperty.getPropertyDefinition().getId() == PID_TAG_TASK_DUE_DATE) {
+			} else if (extendedProperty.getPropertyDefinition().getId() != null && extendedProperty.getPropertyDefinition().getId() == PID_LID_TASK_DUE_DATE) {
 				dueDate = (Date) extendedProperty.getValue();
 			}
 		}
@@ -192,7 +216,9 @@ public class ExchangeTaskSource {
 		task.setExchangeId(email.getId().getUniqueId());
 		task.setLastModified(getCorrectedExchangeTime(email.getLastModifiedTime()));
 		task.setName(email.getSubject());
-		if (flagValue != null && flagValue == PR_FLAG_STATUS_FOLLOWUP_COMPLETE) {
+		if (flagValue == null) {
+			throw new RuntimeException("Found email without follow-up flag!");
+		} else if (flagValue == PR_FLAG_STATUS_FOLLOWUP_COMPLETE) {
 			task.setCompleted(true);
 		}
 		task.setDueDate(dueDate);
@@ -239,17 +265,37 @@ public class ExchangeTaskSource {
 		} else {
 			email.setExtendedProperty(PR_TASK_DUE_DATE, task.getDueDate());
 		}
-		email.update(ConflictResolutionMode.NeverOverwrite);
+		email.update(ConflictResolutionMode.AlwaysOverwrite);
 	}
 
 	public void updateCompletedFlag(final ExchangeTaskDto task) throws Exception {
 		ItemId itemId = new ItemId(task.getExchangeId());
 		Item email = Item.bind(service, itemId, createEmailPropertySet());
+		email.setExtendedProperty(PR_TODO_TITLE, task.getName());
+		email.setExtendedProperty(PR_TASK_MODE, 0); // Task is not assigned
 		if (task.isCompleted()) {
+			email.removeExtendedProperty(PR_FLAG_REQUEST);
+			email.setExtendedProperty(PR_TASK_COMPLETE, true);
+			email.setExtendedProperty(PR_PERCENT_COMPLETE, 1d);
+			email.setExtendedProperty(PR_TASK_DATE_COMPLETED, new Date());
+			email.setExtendedProperty(PR_TASK_STATUS, 2); // User's work on this task is complete
 			email.setExtendedProperty(PR_FLAG_STATUS, PR_FLAG_STATUS_FOLLOWUP_COMPLETE);
 		} else {
+			email.setExtendedProperty(PR_TASK_START_DATE, new Date());
+			email.setExtendedProperty(PR_FLAG_REQUEST, "Follow up");
+			email.setExtendedProperty(PR_TODO_ORDINAL_DATE, new Date());
+			email.setExtendedProperty(PR_TODO_SUB_ORDINAL, "5555555");
+			email.setExtendedProperty(PR_TASK_COMPLETE, false);
+			email.setExtendedProperty(PR_PERCENT_COMPLETE, 0d);
+			email.removeExtendedProperty(PR_TASK_DATE_COMPLETED);
+			email.setExtendedProperty(PR_TASK_STATUS, 0);
 			email.setExtendedProperty(PR_FLAG_STATUS, PR_FLAG_STATUS_FOLLOWUP_FLAGGED);
 		}
-		email.update(ConflictResolutionMode.NeverOverwrite);
+		email.update(ConflictResolutionMode.AlwaysOverwrite);
+	}
+
+	private String convertDateToString(Date theDate) {
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+		return dateFormat.format(theDate) + "T23:00:00Z";
 	}
 }

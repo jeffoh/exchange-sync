@@ -11,15 +11,15 @@ import com.elasticpath.exchangertmsync.Pair;
 import com.elasticpath.exchangertmsync.tasksource.exchange.dto.ExchangeTaskDto;
 
 public abstract class SyncTasks {
-	
+
 	/**
 	 * Take a matching RTM task and exchange task and determine what needs to be done to sync them.
-	 * 
+	 *
 	 * @param rtmTask Remember the Milk task (or null if no matching task exists)
 	 * @param exchangeTask Exchange task (or null if no matching task exists)
 	 */
 	public void sync(ExchangeTaskDto rtmTask, ExchangeTaskDto exchangeTask) {
-		if (exchangeTask != null && rtmTask == null) {
+		if (exchangeTask != null && !exchangeTask.isCompleted() && rtmTask == null) {
 			rtmTaskAdd(exchangeTask);
 		} else if (exchangeTask != null && rtmTask != null) {
 			if (exchangeTask.getLastModified().after(rtmTask.getLastModified())) {
@@ -45,11 +45,11 @@ public abstract class SyncTasks {
 			}
 		}
 	}
-	
+
 	public void syncAll() {
-		// Generate matching pairs of tasks 
+		// Generate matching pairs of tasks
 		List<Pair<ExchangeTaskDto, ExchangeTaskDto>> pairs = generatePairs();
-		
+
 		// Create/complete/delete as required
 		for (Pair<ExchangeTaskDto, ExchangeTaskDto> pair : pairs) {
 			sync(pair.getLeft(), pair.getRight());
@@ -70,9 +70,9 @@ public abstract class SyncTasks {
 		ExchangeTaskDto rtmTask = rtmTaskIdMap.get(exchangeTask.getExchangeId());
 		return new Pair<ExchangeTaskDto, ExchangeTaskDto>(rtmTask, exchangeTask);
 	}
-	
+
 	protected abstract void rtmTaskAdd(ExchangeTaskDto task);
-	
+
 	protected abstract void rtmTaskUpdateCompletedFlag(ExchangeTaskDto task);
 
 	protected abstract void rtmTaskUpdateDueDate(ExchangeTaskDto task);

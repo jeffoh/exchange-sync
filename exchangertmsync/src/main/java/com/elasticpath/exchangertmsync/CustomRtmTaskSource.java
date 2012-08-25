@@ -45,7 +45,7 @@ public class CustomRtmTaskSource extends RtmTaskSource {
 
 	public List<ExchangeTaskDto> getTasksWithExchangeId(final String listId) throws RtmServerException {
 		List<ExchangeTaskDto> results = new ArrayList<ExchangeTaskDto>();
-		for (TaskDto task : super.getTasks(listId)) {
+		for (TaskDto task : super.getAllTasks(listId)) {
 			ExchangeTaskDto result = ExchangeTaskDto.fromTaskDto(task);
 			for (NoteDto note : task.getNotes()) {
 				if (note.getTitle().equals(EXCHANGE_ID_NOTE_TITLE)) {
