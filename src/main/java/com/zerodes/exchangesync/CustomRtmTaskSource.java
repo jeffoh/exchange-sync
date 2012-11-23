@@ -1,14 +1,14 @@
-package com.elasticpath.exchangertmsync;
+package com.zerodes.exchangesync;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import com.elasticpath.exchangertmsync.tasksource.exchange.dto.ExchangeTaskDto;
-import com.elasticpath.exchangertmsync.tasksource.rtm.RtmServerException;
-import com.elasticpath.exchangertmsync.tasksource.rtm.RtmTaskSource;
-import com.elasticpath.exchangertmsync.tasksource.rtm.RtmSettings;
-import com.elasticpath.exchangertmsync.tasksource.rtm.dto.NoteDto;
-import com.elasticpath.exchangertmsync.tasksource.rtm.dto.TaskDto;
+import com.zerodes.exchangesync.tasksource.exchange.dto.ExchangeTaskDto;
+import com.zerodes.exchangesync.tasksource.rtm.RtmServerException;
+import com.zerodes.exchangesync.tasksource.rtm.RtmSettings;
+import com.zerodes.exchangesync.tasksource.rtm.RtmTaskSource;
+import com.zerodes.exchangesync.tasksource.rtm.dto.NoteDto;
+import com.zerodes.exchangesync.tasksource.rtm.dto.TaskDto;
 
 public class CustomRtmTaskSource extends RtmTaskSource {
 	private static final String EXCHANGE_ID_NOTE_TITLE = "ExchangeID";

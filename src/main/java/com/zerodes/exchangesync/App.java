@@ -1,12 +1,12 @@
-package com.elasticpath.exchangertmsync;
+package com.zerodes.exchangesync;
 
 import java.util.List;
 import java.util.Map;
 
-import com.elasticpath.exchangertmsync.sync.SyncTasks;
-import com.elasticpath.exchangertmsync.tasksource.exchange.ExchangeTaskSource;
-import com.elasticpath.exchangertmsync.tasksource.exchange.dto.ExchangeTaskDto;
-import com.elasticpath.exchangertmsync.tasksource.rtm.RtmServerException;
+import com.zerodes.exchangesync.sync.SyncTasks;
+import com.zerodes.exchangesync.tasksource.exchange.ExchangeTaskSource;
+import com.zerodes.exchangesync.tasksource.exchange.dto.ExchangeTaskDto;
+import com.zerodes.exchangesync.tasksource.rtm.RtmServerException;
 
 
 public class App {

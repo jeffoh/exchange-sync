@@ -1,4 +1,4 @@
-package com.elasticpath.exchangertmsync;
+package com.zerodes.exchangesync;
 
 public class Pair<L, R> {
 

@@ -1,4 +1,4 @@
-package com.elasticpath.exchangertmsync.tasksource.rtm;
+package com.zerodes.exchangesync.tasksource.rtm;
 
 public interface RtmSettings {
 	

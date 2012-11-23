@@ -1,7 +1,7 @@
-package com.elasticpath.exchangertmsync;
+package com.zerodes.exchangesync;
 
-import com.elasticpath.exchangertmsync.tasksource.exchange.ExchangeTaskSource;
-import com.elasticpath.exchangertmsync.tasksource.exchange.dto.ExchangeTaskDto;
+import com.zerodes.exchangesync.tasksource.exchange.ExchangeTaskSource;
+import com.zerodes.exchangesync.tasksource.exchange.dto.ExchangeTaskDto;
 
 public class FakeSyncTasks extends CustomSyncTasks {
 	public FakeSyncTasks(CustomRtmTaskSource rtmSource, ExchangeTaskSource exchangeSource, String defaultRtmListId) {

@@ -1,4 +1,4 @@
-package com.elasticpath.exchangertmsync.tasksource.exchange;
+package com.zerodes.exchangesync.tasksource.exchange;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -44,8 +44,8 @@ import microsoft.exchange.webservices.data.SubscriptionErrorEventArgs;
 import microsoft.exchange.webservices.data.WebCredentials;
 import microsoft.exchange.webservices.data.WellKnownFolderName;
 
-import com.elasticpath.exchangertmsync.TaskObserver;
-import com.elasticpath.exchangertmsync.tasksource.exchange.dto.ExchangeTaskDto;
+import com.zerodes.exchangesync.TaskObserver;
+import com.zerodes.exchangesync.tasksource.exchange.dto.ExchangeTaskDto;
 
 public class ExchangeTaskSource {
 	private static final int MAX_EXCHANGE_TASKS = 1000;

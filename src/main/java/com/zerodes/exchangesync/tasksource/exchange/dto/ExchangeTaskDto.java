@@ -1,7 +1,7 @@
-package com.elasticpath.exchangertmsync.tasksource.exchange.dto;
+package com.zerodes.exchangesync.tasksource.exchange.dto;
 
-import com.elasticpath.exchangertmsync.tasksource.rtm.dto.NoteDto;
-import com.elasticpath.exchangertmsync.tasksource.rtm.dto.TaskDto;
+import com.zerodes.exchangesync.tasksource.rtm.dto.NoteDto;
+import com.zerodes.exchangesync.tasksource.rtm.dto.TaskDto;
 
 public class ExchangeTaskDto extends TaskDto {
 	private String exchangeId;

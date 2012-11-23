@@ -1,4 +1,4 @@
-package com.elasticpath.exchangertmsync;
+package com.zerodes.exchangesync;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -8,8 +8,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Properties;
 
-import com.elasticpath.exchangertmsync.tasksource.exchange.ExchangeSettings;
-import com.elasticpath.exchangertmsync.tasksource.rtm.RtmSettings;
+import com.zerodes.exchangesync.tasksource.exchange.ExchangeSettings;
+import com.zerodes.exchangesync.tasksource.rtm.RtmSettings;
 
 public class SettingsImpl implements RtmSettings, ExchangeSettings {
 	private Properties userSettings;

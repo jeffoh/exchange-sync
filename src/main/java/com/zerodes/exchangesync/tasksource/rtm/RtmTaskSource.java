@@ -1,4 +1,4 @@
-package com.elasticpath.exchangertmsync.tasksource.rtm;
+package com.zerodes.exchangesync.tasksource.rtm;
 
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
@@ -23,8 +23,8 @@ import org.dom4j.io.SAXReader;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
 
-import com.elasticpath.exchangertmsync.tasksource.rtm.dto.NoteDto;
-import com.elasticpath.exchangertmsync.tasksource.rtm.dto.TaskDto;
+import com.zerodes.exchangesync.tasksource.rtm.dto.NoteDto;
+import com.zerodes.exchangesync.tasksource.rtm.dto.TaskDto;
 
 public class RtmTaskSource {
 	private static final String REST_HOST = "api.rememberthemilk.com";

@@ -1,4 +1,4 @@
-package com.elasticpath.exchangertmsync.tasksource.rtm.dto;
+package com.zerodes.exchangesync.tasksource.rtm.dto;
 
 import java.util.Date;
 import java.util.HashSet;

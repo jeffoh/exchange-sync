@@ -1,4 +1,4 @@
-package com.elasticpath.exchangertmsync.tasksource.rtm.dto;
+package com.zerodes.exchangesync.tasksource.rtm.dto;
 
 public class NoteDto {
 	private String title;

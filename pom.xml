@@ -2,12 +2,12 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
-	<groupId>com.elasticpath</groupId>
-	<artifactId>exchangertmsync</artifactId>
+	<groupId>com.zerodes</groupId>
+	<artifactId>exchangesync</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
-	<name>exchangertmsync</name>
+	<name>Exchange Sync</name>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -113,7 +113,7 @@
 					</descriptorRefs>
 					<archive>
 						<manifest>
-							<mainClass>com.elasticpath.exchangertmsync.App</mainClass>
+							<mainClass>com.zerodes.exchangesync.App</mainClass>
 						</manifest>
 					</archive>
 				</configuration>
@@ -131,7 +131,7 @@
 				<artifactId>exec-maven-plugin</artifactId>
 				<version>1.2.1</version>
 				<configuration>
-					<mainClass>com.elasticpath.exchangertmsync.App</mainClass>
+					<mainClass>com.zerodes.exchangesync.App</mainClass>
 				</configuration>
 			</plugin>
 		</plugins>

@@ -1,4 +1,4 @@
-package com.elasticpath.exchangertmsync.tasksource.rtm;
+package com.zerodes.exchangesync.tasksource.rtm;
 
 public class RtmServerException extends Exception {
 	private int rtmErrorCode;

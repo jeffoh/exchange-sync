@@ -1,4 +1,4 @@
-package com.elasticpath.exchangertmsync.tasksource.exchange;
+package com.zerodes.exchangesync.tasksource.exchange;
 
 public interface ExchangeSettings {
 

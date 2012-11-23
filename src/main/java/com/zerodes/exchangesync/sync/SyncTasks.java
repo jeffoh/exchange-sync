@@ -1,4 +1,4 @@
-package com.elasticpath.exchangertmsync.sync;
+package com.zerodes.exchangesync.sync;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -7,8 +7,8 @@ import java.util.Map;
 
 import org.apache.commons.lang.ObjectUtils;
 
-import com.elasticpath.exchangertmsync.Pair;
-import com.elasticpath.exchangertmsync.tasksource.exchange.dto.ExchangeTaskDto;
+import com.zerodes.exchangesync.Pair;
+import com.zerodes.exchangesync.tasksource.exchange.dto.ExchangeTaskDto;
 
 public abstract class SyncTasks {
 
