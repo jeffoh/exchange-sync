@@ -1,4 +1,4 @@
-package com.zerodes.exchangesync.tasksource.exchange;
+package com.zerodes.exchangesync.exchange;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -46,8 +46,9 @@ import microsoft.exchange.webservices.data.WellKnownFolderName;
 
 import com.zerodes.exchangesync.TaskObserver;
 import com.zerodes.exchangesync.dto.TaskDto;
+import com.zerodes.exchangesync.tasksource.TaskSource;
 
-public class ExchangeTaskSourceImpl implements TaskSource {
+public class ExchangeSourceImpl implements TaskSource {
 	private static final int MAX_EXCHANGE_TASKS = 1000;
 	private static final int SUBSCRIPTION_TIMEOUT = 30; // in minutes
 	private static final boolean ENABLE_DEBUGGING = false;
@@ -88,7 +89,7 @@ public class ExchangeTaskSourceImpl implements TaskSource {
 	private ExchangeService service;
 	private ExchangeEventsHandler eventsHandler;
 
-	public ExchangeTaskSourceImpl(String mailHost, String username, String password) throws Exception {
+	public ExchangeSourceImpl(String mailHost, String username, String password) throws Exception {
 		System.out.println("Connecting to Exchange (" + mailHost + ") as " + username + "...");
 
 		ExchangeCredentials credentials = new WebCredentials(username, password);

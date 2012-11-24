@@ -27,7 +27,7 @@ import org.joda.time.format.ISODateTimeFormat;
 import com.zerodes.exchangesync.dto.NoteDto;
 import com.zerodes.exchangesync.dto.TaskDto;
 import com.zerodes.exchangesync.settings.Settings;
-import com.zerodes.exchangesync.tasksource.exchange.TaskSource;
+import com.zerodes.exchangesync.tasksource.TaskSource;
 
 public class RtmTaskSourceImpl implements TaskSource {
 	private static final String RTM_API_KEY = "0bcf4c7e3182ec34f45321512e576300";

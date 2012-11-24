@@ -4,10 +4,10 @@ import java.util.Collection;
 import java.util.Map;
 
 import com.zerodes.exchangesync.dto.TaskDto;
+import com.zerodes.exchangesync.exchange.ExchangeSourceImpl;
 import com.zerodes.exchangesync.settings.SettingsImpl;
-import com.zerodes.exchangesync.sync.SyncTasks;
-import com.zerodes.exchangesync.tasksource.exchange.ExchangeTaskSourceImpl;
-import com.zerodes.exchangesync.tasksource.exchange.TaskSource;
+import com.zerodes.exchangesync.sync.SyncTasksImpl;
+import com.zerodes.exchangesync.tasksource.TaskSource;
 import com.zerodes.exchangesync.tasksource.rtm.RtmServerException;
 import com.zerodes.exchangesync.tasksource.rtm.RtmTaskSourceImpl;
 
@@ -23,16 +23,15 @@ public class App {
 			final TaskSource rtmSource = new RtmTaskSourceImpl(settings);
 			
 			// Initialize exchange source
-			final ExchangeTaskSourceImpl exchangeSource = new ExchangeTaskSourceImpl(settings.getExchangeHost(), settings.getExchangeUsername(), settings.getExchangePassword());
+			final ExchangeSourceImpl exchangeSource = new ExchangeSourceImpl(settings.getExchangeHost(), settings.getExchangeUsername(), settings.getExchangePassword());
 			
 			// Initialize synchronization engine
-			final SyncTasks syncTasks = new SyncTasks(exchangeSource, rtmSource);
+			final SyncTasksImpl syncTasks = new SyncTasksImpl(exchangeSource, rtmSource);
 			
 			final TaskObserver taskObserver = new TaskObserver() {
 				@Override
 				public void taskChanged(TaskDto task) {
-					Collection<TaskDto> rtmTasks;
-					rtmTasks = rtmSource.getAllTasks();
+					Collection<TaskDto> rtmTasks = rtmSource.getAllTasks();
 					Map<String, TaskDto> rtmTaskIdMap = syncTasks.generateExchangeIdMap(rtmTasks);
 					Pair<TaskDto, TaskDto> pair = syncTasks.generatePairForExchangeTask(rtmTaskIdMap, task);
 					syncTasks.sync(pair.getLeft(), pair.getRight());

@@ -4,9 +4,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 import com.zerodes.exchangesync.dto.TaskDto;
-import com.zerodes.exchangesync.tasksource.exchange.TaskSource;
+import com.zerodes.exchangesync.tasksource.TaskSource;
 
-public class NullTaskSource implements TaskSource {
+public class NullTaskSourceImpl implements TaskSource {
 
 	@Override
 	public Collection<TaskDto> getAllTasks() {

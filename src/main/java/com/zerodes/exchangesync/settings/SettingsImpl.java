@@ -8,7 +8,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Properties;
 
-import com.zerodes.exchangesync.tasksource.exchange.ExchangeSettings;
+import com.zerodes.exchangesync.tasksource.ExchangeSettings;
 
 public class SettingsImpl implements Settings, ExchangeSettings {
 	private Properties userSettings;

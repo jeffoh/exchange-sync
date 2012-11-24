@@ -10,14 +10,14 @@ import org.apache.commons.lang.ObjectUtils;
 
 import com.zerodes.exchangesync.Pair;
 import com.zerodes.exchangesync.dto.TaskDto;
-import com.zerodes.exchangesync.tasksource.exchange.TaskSource;
+import com.zerodes.exchangesync.tasksource.TaskSource;
 
-public class SyncTasks {
+public class SyncTasksImpl {
 
 	private TaskSource exchangeSource;
 	private TaskSource otherSource;
 
-	public SyncTasks(TaskSource exchangeSource, TaskSource otherSource) {
+	public SyncTasksImpl(TaskSource exchangeSource, TaskSource otherSource) {
 		this.exchangeSource = exchangeSource;
 		this.otherSource = otherSource;
 	}

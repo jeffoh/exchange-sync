@@ -1,4 +1,4 @@
-package com.zerodes.exchangesync.tasksource.exchange;
+package com.zerodes.exchangesync.tasksource;
 
 import java.util.Collection;
 
