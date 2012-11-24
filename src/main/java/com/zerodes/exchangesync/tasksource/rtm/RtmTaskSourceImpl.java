@@ -29,7 +29,7 @@ import com.zerodes.exchangesync.dto.TaskDto;
 import com.zerodes.exchangesync.settings.Settings;
 import com.zerodes.exchangesync.tasksource.exchange.TaskSource;
 
-public class RtmTaskSource implements TaskSource {
+public class RtmTaskSourceImpl implements TaskSource {
 	private static final String RTM_API_KEY = "0bcf4c7e3182ec34f45321512e576300";
 	private static final String RTM_SHARED_SECRET = "fbf7a0bdb0011532";
 
@@ -53,7 +53,7 @@ public class RtmTaskSource implements TaskSource {
 		AUTHORIZED
 	}
 
-	public RtmTaskSource(final Settings settings) {
+	public RtmTaskSourceImpl(final Settings settings) {
 		this.settings = settings;
 		System.out.println("Connecting to Remember The Milk...");
 		try {

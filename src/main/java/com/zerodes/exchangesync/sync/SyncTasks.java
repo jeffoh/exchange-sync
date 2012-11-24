@@ -44,7 +44,7 @@ public class SyncTasks {
 			otherSource.addTask(exchangeTask);
 		} else if (exchangeTask != null && otherTask != null) {
 			if (exchangeTask.getLastModified().after(otherTask.getLastModified())) {
-				// Exchange task has a more recent modified date, so modify RTM
+				// Exchange task has a more recent modified date, so modify other task
 				if (exchangeTask.isCompleted() != otherTask.isCompleted()) {
 					otherTask.setCompleted(exchangeTask.isCompleted());
 					otherSource.updateCompletedFlag(otherTask);
@@ -54,7 +54,7 @@ public class SyncTasks {
 					otherSource.updateDueDate(otherTask);
 				}
 			} else {
-				// RTM task has a more recent modified date, so modify Exchange
+				// Other task has a more recent modified date, so modify Exchange
 				if (exchangeTask.isCompleted() != otherTask.isCompleted()) {
 					exchangeTask.setCompleted(otherTask.isCompleted());
 					exchangeSource.updateCompletedFlag(exchangeTask);

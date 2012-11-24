@@ -9,7 +9,7 @@ import com.zerodes.exchangesync.sync.SyncTasks;
 import com.zerodes.exchangesync.tasksource.exchange.ExchangeTaskSourceImpl;
 import com.zerodes.exchangesync.tasksource.exchange.TaskSource;
 import com.zerodes.exchangesync.tasksource.rtm.RtmServerException;
-import com.zerodes.exchangesync.tasksource.rtm.RtmTaskSource;
+import com.zerodes.exchangesync.tasksource.rtm.RtmTaskSourceImpl;
 
 
 public class App {
@@ -20,7 +20,7 @@ public class App {
 		
 		try {
 			// Initialize RTM source
-			final TaskSource rtmSource = new RtmTaskSource(settings);
+			final TaskSource rtmSource = new RtmTaskSourceImpl(settings);
 			
 			// Initialize exchange source
 			final ExchangeTaskSourceImpl exchangeSource = new ExchangeTaskSourceImpl(settings.getExchangeHost(), settings.getExchangeUsername(), settings.getExchangePassword());
