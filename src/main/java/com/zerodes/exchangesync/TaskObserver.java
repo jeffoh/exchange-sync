@@ -1,7 +1,7 @@
 package com.zerodes.exchangesync;
 
-import com.zerodes.exchangesync.tasksource.exchange.dto.ExchangeTaskDto;
+import com.zerodes.exchangesync.dto.TaskDto;
 
 public interface TaskObserver {
-	void taskChanged(ExchangeTaskDto task);
+	void taskChanged(TaskDto task);
 }

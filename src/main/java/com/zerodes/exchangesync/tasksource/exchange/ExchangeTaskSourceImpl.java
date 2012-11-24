@@ -45,9 +45,9 @@ import microsoft.exchange.webservices.data.WebCredentials;
 import microsoft.exchange.webservices.data.WellKnownFolderName;
 
 import com.zerodes.exchangesync.TaskObserver;
-import com.zerodes.exchangesync.tasksource.exchange.dto.ExchangeTaskDto;
+import com.zerodes.exchangesync.dto.TaskDto;
 
-public class ExchangeTaskSource {
+public class ExchangeTaskSourceImpl implements TaskSource {
 	private static final int MAX_EXCHANGE_TASKS = 1000;
 	private static final int SUBSCRIPTION_TIMEOUT = 30; // in minutes
 	private static final boolean ENABLE_DEBUGGING = false;
@@ -88,7 +88,9 @@ public class ExchangeTaskSource {
 	private ExchangeService service;
 	private ExchangeEventsHandler eventsHandler;
 
-	public ExchangeTaskSource(String mailHost, String username, String password) throws Exception {
+	public ExchangeTaskSourceImpl(String mailHost, String username, String password) throws Exception {
+		System.out.println("Connecting to Exchange (" + mailHost + ") as " + username + "...");
+
 		ExchangeCredentials credentials = new WebCredentials(username, password);
 		service = new ExchangeService();
 		service.setCredentials(credentials);
@@ -109,6 +111,8 @@ public class ExchangeTaskSource {
 		connection.addOnNotificationEvent(eventsHandler);
 		connection.addOnSubscriptionError(eventsHandler);
 		connection.open();
+		
+		System.out.println("Connected to Exchange");
 	}
 
 	private class ExchangeEventsHandler implements ISubscriptionErrorDelegate, INotificationEventDelegate {
@@ -153,15 +157,21 @@ public class ExchangeTaskSource {
 			taskEventObservers.add(observer);
 		}
 
-		public void notifyTaskEventListeners(final ExchangeTaskDto task) {
+		public void notifyTaskEventListeners(final TaskDto task) {
 			for (TaskObserver observer : taskEventObservers) {
 				observer.taskChanged(task);
 			}
 		}
 	}
 
-	public Set<ExchangeTaskDto> getAllTasks() {
-		Set<ExchangeTaskDto> results = new HashSet<ExchangeTaskDto>();
+	@Override
+	public void addTask(TaskDto task) {
+		throw new UnsupportedOperationException("Unable to add new tasks to Exchange");
+	}
+
+	@Override
+	public Set<TaskDto> getAllTasks() {
+		Set<TaskDto> results = new HashSet<TaskDto>();
 		try {
 			// Take a look at http://blogs.planetsoftware.com.au/paul/archive/2010/05/20/exchange-web-services-ews-managed-api-ndash-part-2.aspx
 			SearchFilterCollection searchFilterCollection = new SearchFilterCollection(LogicalOperator.Or);
@@ -202,7 +212,7 @@ public class ExchangeTaskSource {
 		return findFoldersResults.getFolders().iterator().next();
 	}
 
-	public ExchangeTaskDto convertExchangeEmailToTaskDto(Item email) throws ServiceLocalException {
+	public TaskDto convertExchangeEmailToTaskDto(Item email) throws ServiceLocalException {
 		Integer flagValue = null;
 		Date dueDate = null;
 		for (ExtendedProperty extendedProperty : email.getExtendedProperties()) {
@@ -212,7 +222,7 @@ public class ExchangeTaskSource {
 				dueDate = (Date) extendedProperty.getValue();
 			}
 		}
-		ExchangeTaskDto task = new ExchangeTaskDto();
+		TaskDto task = new TaskDto();
 		task.setExchangeId(email.getId().getUniqueId());
 		task.setLastModified(getCorrectedExchangeTime(email.getLastModifiedTime()));
 		task.setName(email.getSubject());
@@ -257,41 +267,51 @@ public class ExchangeTaskSource {
 		eventsHandler.addTaskEventListener(observer);
 	}
 
-	public void updateDueDate(final ExchangeTaskDto task) throws Exception {
-		ItemId itemId = new ItemId(task.getExchangeId());
-		Item email = Item.bind(service, itemId, createEmailPropertySet());
-		if (task.getDueDate() == null) {
-			email.removeExtendedProperty(PR_TASK_DUE_DATE);
-		} else {
-			email.setExtendedProperty(PR_TASK_DUE_DATE, task.getDueDate());
+	@Override
+	public void updateDueDate(final TaskDto task) {
+		try {
+			ItemId itemId = new ItemId(task.getExchangeId());
+			Item email = Item.bind(service, itemId, createEmailPropertySet());
+			if (task.getDueDate() == null) {
+				email.removeExtendedProperty(PR_TASK_DUE_DATE);
+			} else {
+				email.setExtendedProperty(PR_TASK_DUE_DATE, task.getDueDate());
+			}
+			email.update(ConflictResolutionMode.AlwaysOverwrite);
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
-		email.update(ConflictResolutionMode.AlwaysOverwrite);
 	}
 
-	public void updateCompletedFlag(final ExchangeTaskDto task) throws Exception {
-		ItemId itemId = new ItemId(task.getExchangeId());
-		Item email = Item.bind(service, itemId, createEmailPropertySet());
-		email.setExtendedProperty(PR_TODO_TITLE, task.getName());
-		email.setExtendedProperty(PR_TASK_MODE, 0); // Task is not assigned
-		if (task.isCompleted()) {
-			email.removeExtendedProperty(PR_FLAG_REQUEST);
-			email.setExtendedProperty(PR_TASK_COMPLETE, true);
-			email.setExtendedProperty(PR_PERCENT_COMPLETE, 1d);
-			email.setExtendedProperty(PR_TASK_DATE_COMPLETED, new Date());
-			email.setExtendedProperty(PR_TASK_STATUS, 2); // User's work on this task is complete
-			email.setExtendedProperty(PR_FLAG_STATUS, PR_FLAG_STATUS_FOLLOWUP_COMPLETE);
-		} else {
-			email.setExtendedProperty(PR_TASK_START_DATE, new Date());
-			email.setExtendedProperty(PR_FLAG_REQUEST, "Follow up");
-			email.setExtendedProperty(PR_TODO_ORDINAL_DATE, new Date());
-			email.setExtendedProperty(PR_TODO_SUB_ORDINAL, "5555555");
-			email.setExtendedProperty(PR_TASK_COMPLETE, false);
-			email.setExtendedProperty(PR_PERCENT_COMPLETE, 0d);
-			email.removeExtendedProperty(PR_TASK_DATE_COMPLETED);
-			email.setExtendedProperty(PR_TASK_STATUS, 0);
-			email.setExtendedProperty(PR_FLAG_STATUS, PR_FLAG_STATUS_FOLLOWUP_FLAGGED);
+	@Override
+	public void updateCompletedFlag(final TaskDto task) {
+		try {
+			ItemId itemId = new ItemId(task.getExchangeId());
+			Item email = Item.bind(service, itemId, createEmailPropertySet());
+			email.setExtendedProperty(PR_TODO_TITLE, task.getName());
+			email.setExtendedProperty(PR_TASK_MODE, 0); // Task is not assigned
+			if (task.isCompleted()) {
+				email.removeExtendedProperty(PR_FLAG_REQUEST);
+				email.setExtendedProperty(PR_TASK_COMPLETE, true);
+				email.setExtendedProperty(PR_PERCENT_COMPLETE, 1d);
+				email.setExtendedProperty(PR_TASK_DATE_COMPLETED, new Date());
+				email.setExtendedProperty(PR_TASK_STATUS, 2); // User's work on this task is complete
+				email.setExtendedProperty(PR_FLAG_STATUS, PR_FLAG_STATUS_FOLLOWUP_COMPLETE);
+			} else {
+				email.setExtendedProperty(PR_TASK_START_DATE, new Date());
+				email.setExtendedProperty(PR_FLAG_REQUEST, "Follow up");
+				email.setExtendedProperty(PR_TODO_ORDINAL_DATE, new Date());
+				email.setExtendedProperty(PR_TODO_SUB_ORDINAL, "5555555");
+				email.setExtendedProperty(PR_TASK_COMPLETE, false);
+				email.setExtendedProperty(PR_PERCENT_COMPLETE, 0d);
+				email.removeExtendedProperty(PR_TASK_DATE_COMPLETED);
+				email.setExtendedProperty(PR_TASK_STATUS, 0);
+				email.setExtendedProperty(PR_FLAG_STATUS, PR_FLAG_STATUS_FOLLOWUP_FLAGGED);
+			}
+			email.update(ConflictResolutionMode.AlwaysOverwrite);
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
-		email.update(ConflictResolutionMode.AlwaysOverwrite);
 	}
 
 	private String convertDateToString(Date theDate) {

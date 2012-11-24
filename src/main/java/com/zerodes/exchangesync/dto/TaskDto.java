@@ -1,12 +1,11 @@
-package com.zerodes.exchangesync.tasksource.rtm.dto;
+package com.zerodes.exchangesync.dto;
 
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 
 public class TaskDto {
-	private String rtmTaskId;
-	private String rtmTimeSeriesId;
+	private String exchangeId;
 	private Date lastModified;
 	private String name;
 	private Date dueDate;
@@ -16,24 +15,14 @@ public class TaskDto {
 	private Set<String> tags = new HashSet<String>();
 	private Set<NoteDto> notes = new HashSet<NoteDto>();
 	
-	// NOTE: If you add a new field in this class, remember to modify ExchangeTaskDto.fromTaskDto.
+	public String getExchangeId() {
+		return exchangeId;
+	}
+
+	public void setExchangeId(String exchangeId) {
+		this.exchangeId = exchangeId;
+	}
 	
-	public String getRtmTaskId() {
-		return rtmTaskId;
-	}
-
-	public void setRtmTaskId(String rtmTaskId) {
-		this.rtmTaskId = rtmTaskId;
-	}
-
-	public String getRtmTimeSeriesId() {
-		return rtmTimeSeriesId;
-	}
-
-	public void setRtmTimeSeriesId(String rtmTimeSeriesId) {
-		this.rtmTimeSeriesId = rtmTimeSeriesId;
-	}
-
 	public Date getLastModified() {
 		return lastModified;
 	}
@@ -96,5 +85,17 @@ public class TaskDto {
 
 	public void addNote(final NoteDto note) {
 		notes.add(note);
+	}
+	
+	public void copyTo(final TaskDto dest) {
+		dest.exchangeId = exchangeId;
+		dest.lastModified = lastModified;
+		dest.name = name;
+		dest.dueDate = dueDate;
+		dest.priority = priority;
+		dest.url = url;
+		dest.completed = completed;
+		dest.tags = tags;
+		dest.notes = notes;
 	}
 }

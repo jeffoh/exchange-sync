@@ -23,6 +23,7 @@ public class Pair<L, R> {
 		return left.hashCode() ^ right.hashCode();
 	}
 
+	@SuppressWarnings("rawtypes")
 	@Override
 	public boolean equals(Object o) {
 		if (o == null)

@@ -1,5 +1,6 @@
 package com.zerodes.exchangesync.sync;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -8,39 +9,59 @@ import java.util.Map;
 import org.apache.commons.lang.ObjectUtils;
 
 import com.zerodes.exchangesync.Pair;
-import com.zerodes.exchangesync.tasksource.exchange.dto.ExchangeTaskDto;
+import com.zerodes.exchangesync.dto.TaskDto;
+import com.zerodes.exchangesync.tasksource.exchange.TaskSource;
 
-public abstract class SyncTasks {
+public class SyncTasks {
+
+	private TaskSource exchangeSource;
+	private TaskSource otherSource;
+
+	public SyncTasks(TaskSource exchangeSource, TaskSource otherSource) {
+		this.exchangeSource = exchangeSource;
+		this.otherSource = otherSource;
+	}
+
+	protected List<Pair<TaskDto, TaskDto>> generatePairs() {
+		List<Pair<TaskDto, TaskDto>> results = new ArrayList<Pair<TaskDto, TaskDto>>();
+		Collection<TaskDto> otherTasks = otherSource.getAllTasks();
+		Collection<TaskDto> exchangeTasks = exchangeSource.getAllTasks();
+		Map<String, TaskDto> otherTasksMap = generateExchangeIdMap(otherTasks);
+		for (TaskDto exchangeTask : exchangeTasks) {
+			results.add(generatePairForExchangeTask(otherTasksMap, exchangeTask));
+		}
+		return results;
+	}
 
 	/**
-	 * Take a matching RTM task and exchange task and determine what needs to be done to sync them.
+	 * Take a matching exchange task and other task and determine what needs to be done to sync them.
 	 *
-	 * @param rtmTask Remember the Milk task (or null if no matching task exists)
 	 * @param exchangeTask Exchange task (or null if no matching task exists)
+	 * @param otherTask Task from "other" data source (or null if no matching task exists)
 	 */
-	public void sync(ExchangeTaskDto rtmTask, ExchangeTaskDto exchangeTask) {
-		if (exchangeTask != null && !exchangeTask.isCompleted() && rtmTask == null) {
-			rtmTaskAdd(exchangeTask);
-		} else if (exchangeTask != null && rtmTask != null) {
-			if (exchangeTask.getLastModified().after(rtmTask.getLastModified())) {
+	public void sync(TaskDto exchangeTask, TaskDto otherTask) {
+		if (exchangeTask != null && !exchangeTask.isCompleted() && otherTask == null) {
+			otherSource.addTask(exchangeTask);
+		} else if (exchangeTask != null && otherTask != null) {
+			if (exchangeTask.getLastModified().after(otherTask.getLastModified())) {
 				// Exchange task has a more recent modified date, so modify RTM
-				if (exchangeTask.isCompleted() != rtmTask.isCompleted()) {
-					rtmTask.setCompleted(exchangeTask.isCompleted());
-					rtmTaskUpdateCompletedFlag(rtmTask);
+				if (exchangeTask.isCompleted() != otherTask.isCompleted()) {
+					otherTask.setCompleted(exchangeTask.isCompleted());
+					otherSource.updateCompletedFlag(otherTask);
 				}
-				if (!ObjectUtils.equals(exchangeTask.getDueDate(), rtmTask.getDueDate())) {
-					rtmTask.setDueDate(exchangeTask.getDueDate());
-					rtmTaskUpdateDueDate(rtmTask);
+				if (!ObjectUtils.equals(exchangeTask.getDueDate(), otherTask.getDueDate())) {
+					otherTask.setDueDate(exchangeTask.getDueDate());
+					otherSource.updateDueDate(otherTask);
 				}
 			} else {
 				// RTM task has a more recent modified date, so modify Exchange
-				if (exchangeTask.isCompleted() != rtmTask.isCompleted()) {
-					exchangeTask.setCompleted(rtmTask.isCompleted());
-					exchangeTaskUpdateCompletedFlag(exchangeTask);
+				if (exchangeTask.isCompleted() != otherTask.isCompleted()) {
+					exchangeTask.setCompleted(otherTask.isCompleted());
+					exchangeSource.updateCompletedFlag(exchangeTask);
 				}
-				if (!ObjectUtils.equals(exchangeTask.getDueDate(), rtmTask.getDueDate())) {
-					exchangeTask.setDueDate(rtmTask.getDueDate());
-					exchangeTaskUpdateDueDate(exchangeTask);
+				if (!ObjectUtils.equals(exchangeTask.getDueDate(), otherTask.getDueDate())) {
+					exchangeTask.setDueDate(otherTask.getDueDate());
+					exchangeSource.updateDueDate(exchangeTask);
 				}
 			}
 		}
@@ -48,36 +69,24 @@ public abstract class SyncTasks {
 
 	public void syncAll() {
 		// Generate matching pairs of tasks
-		List<Pair<ExchangeTaskDto, ExchangeTaskDto>> pairs = generatePairs();
+		List<Pair<TaskDto, TaskDto>> pairs = generatePairs();
 
 		// Create/complete/delete as required
-		for (Pair<ExchangeTaskDto, ExchangeTaskDto> pair : pairs) {
+		for (Pair<TaskDto, TaskDto> pair : pairs) {
 			sync(pair.getLeft(), pair.getRight());
 		}
 	}
 
-	protected abstract List<Pair<ExchangeTaskDto, ExchangeTaskDto>> generatePairs();
-
-	public Map<String, ExchangeTaskDto> generateExchangeIdMap(Collection<ExchangeTaskDto> rtmTasks) {
-		Map<String, ExchangeTaskDto> results = new HashMap<String, ExchangeTaskDto>();
-		for (ExchangeTaskDto task : rtmTasks) {
+	public Map<String, TaskDto> generateExchangeIdMap(Collection<TaskDto> tasks) {
+		Map<String, TaskDto> results = new HashMap<String, TaskDto>();
+		for (TaskDto task : tasks) {
 			results.put(task.getExchangeId(), task);
 		}
 		return results;
 	}
 
-	public Pair<ExchangeTaskDto, ExchangeTaskDto> generatePairForExchangeTask(Map<String, ExchangeTaskDto> rtmTaskIdMap, ExchangeTaskDto exchangeTask) {
-		ExchangeTaskDto rtmTask = rtmTaskIdMap.get(exchangeTask.getExchangeId());
-		return new Pair<ExchangeTaskDto, ExchangeTaskDto>(rtmTask, exchangeTask);
+	public Pair<TaskDto, TaskDto> generatePairForExchangeTask(Map<String, TaskDto> otherTaskIdMap, TaskDto exchangeTask) {
+		TaskDto otherTask = otherTaskIdMap.get(exchangeTask.getExchangeId());
+		return new Pair<TaskDto, TaskDto>(exchangeTask, otherTask);
 	}
-
-	protected abstract void rtmTaskAdd(ExchangeTaskDto task);
-
-	protected abstract void rtmTaskUpdateCompletedFlag(ExchangeTaskDto task);
-
-	protected abstract void rtmTaskUpdateDueDate(ExchangeTaskDto task);
-
-	protected abstract void exchangeTaskUpdateCompletedFlag(ExchangeTaskDto task);
-
-	protected abstract void exchangeTaskUpdateDueDate(ExchangeTaskDto task);
 }

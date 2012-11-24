@@ -9,6 +9,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
@@ -23,47 +24,142 @@ import org.dom4j.io.SAXReader;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
 
-import com.zerodes.exchangesync.tasksource.rtm.dto.NoteDto;
-import com.zerodes.exchangesync.tasksource.rtm.dto.TaskDto;
+import com.zerodes.exchangesync.dto.NoteDto;
+import com.zerodes.exchangesync.dto.TaskDto;
+import com.zerodes.exchangesync.settings.Settings;
+import com.zerodes.exchangesync.tasksource.exchange.TaskSource;
 
-public class RtmTaskSource {
+public class RtmTaskSource implements TaskSource {
+	private static final String RTM_API_KEY = "0bcf4c7e3182ec34f45321512e576300";
+	private static final String RTM_SHARED_SECRET = "fbf7a0bdb0011532";
+
 	private static final String REST_HOST = "api.rememberthemilk.com";
 	private static final String REST_AUTH_PATH = "/services/auth/";
 	private static final String REST_METHOD_PATH = "/services/rest/";
 
-	private String apiKey;
-	private String sharedSecret;
-	private RtmSettings settings;
+	private static final String EXCHANGE_ID_NOTE_TITLE = "ExchangeID";
+	private static final String ORIGINAL_SUBJECT_NOTE_TITLE = "Original Email Subject";
+	
+	private static final String USER_SETTING_RTM_LIST_NAME = "rtmListName";
+	private static final String INTERNAL_SETTING_FROB = "frob";
+	private static final String INTERNAL_SETTING_AUTH_TOKEN = "authToken";
 
-	public RtmTaskSource(final String apiKey, final String sharedSecret, final RtmSettings settings) {
-		this.apiKey = apiKey;
-		this.sharedSecret = sharedSecret;
-		this.settings = settings;
+	private Settings settings;
+	private String defaultRtmListId;
+
+	private enum RtmAuthStatus {
+		NEEDS_USER_APPROVAL,
+		NEEDS_AUTH_TOKEN,
+		AUTHORIZED
 	}
 
-	public RtmAuthStatus getAuthStatus() throws RtmServerException {
-		if (StringUtils.isNotEmpty(settings.getFrob())) {
+	public RtmTaskSource(final Settings settings) {
+		this.settings = settings;
+		System.out.println("Connecting to Remember The Milk...");
+		try {
+			switch (getAuthStatus()) {
+			case NEEDS_USER_APPROVAL:
+				throw new RuntimeException("Please go to the following URL to authorize application to sync with Remember The Milk: "
+						+ getAuthenticationUrl("write"));
+			case NEEDS_AUTH_TOKEN:
+				completeAuthentication();
+			}
+			this.defaultRtmListId = getIdForListName(settings.getUserSetting(USER_SETTING_RTM_LIST_NAME));
+		} catch (RtmServerException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	@Override
+	public Collection<TaskDto> getAllTasks() {
+		Collection<TaskDto> results = new ArrayList<TaskDto>();
+		try {
+			results = getAllTasks(defaultRtmListId);
+		} catch (RtmServerException e) {
+			e.printStackTrace();
+		}
+		return results;
+	}
+
+	@Override
+	public void addTask(TaskDto task) {
+		String timelineId;
+		try {
+			// Add email tag
+			task.addTag("email");
+
+			// Add ExchangeID note
+			NoteDto exchangeIdNote = new NoteDto();
+			exchangeIdNote.setTitle(EXCHANGE_ID_NOTE_TITLE);
+			exchangeIdNote.setBody(task.getExchangeId());
+			task.addNote(exchangeIdNote);
+
+			// Add Original Subject note
+			NoteDto originalSubjectNote = new NoteDto();
+			originalSubjectNote.setTitle(ORIGINAL_SUBJECT_NOTE_TITLE);
+			originalSubjectNote.setBody(task.getName());
+			task.addNote(originalSubjectNote);
+
+			timelineId = createTimeline();
+			addTask(timelineId, defaultRtmListId, task);
+			System.out.println("Added RTM task " + task.getName());
+		} catch (RtmServerException e) {
+			e.printStackTrace();
+		}
+	}
+
+	@Override
+	public void updateDueDate(TaskDto task) {
+		try {
+			String timelineId = createTimeline();
+			updateDueDate(timelineId, defaultRtmListId, (RtmTaskDto) task);
+			System.out.println("Updated RTM task due date for " + task.getName());
+		} catch (RtmServerException e) {
+			e.printStackTrace();
+		} catch (UnsupportedEncodingException e) {
+			e.printStackTrace();
+		}
+	}
+
+	@Override
+	public void updateCompletedFlag(TaskDto task) {
+		try {
+			String timelineId = createTimeline();
+			updateCompleteFlag(timelineId, defaultRtmListId, (RtmTaskDto) task);
+			if (task.isCompleted()) {
+				System.out.println("Marked RTM task as completed for " + task.getName());
+			} else {
+				System.out.println("Marked RTM task as incomplete for " + task.getName());
+			}
+		} catch (RtmServerException e) {
+			e.printStackTrace();
+		}
+	}
+
+	private RtmAuthStatus getAuthStatus() throws RtmServerException {
+		if (StringUtils.isNotEmpty(settings.getInternalSetting(INTERNAL_SETTING_FROB))) {
 			return RtmAuthStatus.NEEDS_AUTH_TOKEN;
 		}
-		if (StringUtils.isEmpty(settings.getAuthToken()) || !checkToken()) {
+		if (StringUtils.isEmpty(settings.getInternalSetting(INTERNAL_SETTING_AUTH_TOKEN)) || !checkToken()) {
 			return RtmAuthStatus.NEEDS_USER_APPROVAL;
 		}
 		return RtmAuthStatus.AUTHORIZED;
 	}
 
-	public URL getAuthenticationUrl(final String perms) throws RtmServerException {
+	private URL getAuthenticationUrl(final String perms) throws RtmServerException {
 		try {
 			// Call getFrob
 			TreeMap<String, String> getFrobParams = new TreeMap<String, String>();
 			getFrobParams.put("method", "rtm.auth.getFrob");
 			Document response = parseXML(getRtmUri(REST_METHOD_PATH, getFrobParams));
 			Node node = response.selectSingleNode("/rsp/frob");
-			settings.setFrob(node.getText());
+			settings.setInternalSetting(INTERNAL_SETTING_FROB, node.getText());
 
 			// Generate url
 			TreeMap<String, String> params = new TreeMap<String, String>();
 			params.put("perms", perms);
-			params.put("frob", settings.getFrob());
+			params.put("frob", settings.getInternalSetting(INTERNAL_SETTING_FROB));
 			return getRtmUri(REST_AUTH_PATH, params).toURL();
 		} catch (MalformedURLException e) {
 			throw new RuntimeException("Unable to get authentication url", e);
@@ -73,24 +169,25 @@ public class RtmTaskSource {
 	}
 
 	public void completeAuthentication() throws RtmServerException {
-		if (settings.getFrob() == null) {
+		if (settings.getInternalSetting(INTERNAL_SETTING_FROB) == null) {
 			throw new RuntimeException("Unable to complete authentication unless in NEEDS_AUTH_TOKEN status.");
 		}
 		try {
 			TreeMap<String, String> params = new TreeMap<String, String>();
 			params.put("method", "rtm.auth.getToken");
-			params.put("frob", settings.getFrob());
+			params.put("frob", settings.getInternalSetting(INTERNAL_SETTING_FROB));
 			Document response = parseXML(getRtmUri(REST_METHOD_PATH, params));
 			Node node = response.selectSingleNode("/rsp/auth/token");
-			settings.setAuthToken(node.getText());
+			settings.setInternalSetting(INTERNAL_SETTING_AUTH_TOKEN, node.getText());
 		} catch (UnsupportedEncodingException e) {
 			throw new RuntimeException("Unable to complete authentication", e);
 		} finally {
-			settings.setFrob(null);
+			settings.setInternalSetting(INTERNAL_SETTING_FROB, null);
 		}
 	}
 
-	public String getIdForListName(final String listName) throws RtmServerException {
+	@SuppressWarnings("unchecked")
+	private String getIdForListName(final String listName) throws RtmServerException {
 		try {
 			Document response = parseXML(getRtmMethodUri("rtm.lists.getList"));
 			List<Node> listNodesList = response.selectNodes("/rsp/lists/list");
@@ -113,7 +210,7 @@ public class RtmTaskSource {
 	 * @return timeline id
 	 * @throws RtmServerException
 	 */
-	public String createTimeline() throws RtmServerException {
+	private String createTimeline() throws RtmServerException {
 		try {
 			Document response = parseXML(getRtmMethodUri("rtm.timelines.create"));
 			Node node = response.selectSingleNode("/rsp/timeline");
@@ -131,38 +228,40 @@ public class RtmTaskSource {
 	 * @param task
 	 * @throws RtmServerException
 	 */
-	public void addTask(final String timelineId, final String listId, final TaskDto task) throws RtmServerException {
+	private void addTask(final String timelineId, final String listId, final TaskDto task) throws RtmServerException {
 		try {
-			// Add task
 			TreeMap<String, String> addTaskParams = new TreeMap<String, String>();
 			addTaskParams.put("timeline", timelineId);
 			addTaskParams.put("list_id", listId);
 			addTaskParams.put("name", task.getName());
 			Document response = parseXML(getRtmMethodUri("rtm.tasks.add", addTaskParams));
+			
+			RtmTaskDto rtmTask = new RtmTaskDto();
+			task.copyTo(rtmTask);
 			Node idNode = response.selectSingleNode("/rsp/list/taskseries/task/@id");
-			task.setRtmTaskId(idNode.getText());
+			rtmTask.setRtmTaskId(idNode.getText());
 			Node taskSeriesIdNode = response.selectSingleNode("/rsp/list/taskseries/@id");
-			task.setRtmTimeSeriesId(taskSeriesIdNode.getText());
+			rtmTask.setRtmTimeSeriesId(taskSeriesIdNode.getText());
 			
 			// Set due date (if required)
-			if (task.getDueDate() != null) {
-				updateDueDate(timelineId, listId, task);
+			if (rtmTask.getDueDate() != null) {
+				updateDueDate(timelineId, listId, rtmTask);
 			}
 			
 			// Set completed (if required)
-			if (task.isCompleted()) {
-				updateCompleteFlag(timelineId, listId, task);
+			if (rtmTask.isCompleted()) {
+				updateCompleteFlag(timelineId, listId, rtmTask);
 			}
 			
 			// Add tags (if required)
-			if (!task.getTags().isEmpty()) {
-				addTags(timelineId, listId, task, task.getTags());
+			if (!rtmTask.getTags().isEmpty()) {
+				addTags(timelineId, listId, rtmTask, rtmTask.getTags());
 			}
 			
 			// Add notes (if required)
-			if (!task.getNotes().isEmpty()) {
-				for (final NoteDto note : task.getNotes()) {
-					addNote(timelineId, listId, task, note);
+			if (!rtmTask.getNotes().isEmpty()) {
+				for (final NoteDto note : rtmTask.getNotes()) {
+					addNote(timelineId, listId, rtmTask, note);
 				}
 			}
 		} catch (UnsupportedEncodingException e) {
@@ -179,7 +278,7 @@ public class RtmTaskSource {
 	 * @throws RtmServerException
 	 * @throws UnsupportedEncodingException
 	 */
-	public void updateDueDate(final String timelineId, final String listId, final TaskDto task)
+	private void updateDueDate(final String timelineId, final String listId, final RtmTaskDto task)
 			throws RtmServerException, UnsupportedEncodingException {
 		TreeMap<String, String> setDueDateParams = new TreeMap<String, String>();
 		setDueDateParams.put("task_id", task.getRtmTaskId());
@@ -199,7 +298,7 @@ public class RtmTaskSource {
 	 * @throws RtmServerException
 	 * @throws UnsupportedEncodingException
 	 */
-	public void updateUrl(final String timelineId, final String listId, final TaskDto task)
+	private void updateUrl(final String timelineId, final String listId, final RtmTaskDto task)
 			throws RtmServerException, UnsupportedEncodingException {
 		TreeMap<String, String> setUrlParams = new TreeMap<String, String>();
 		setUrlParams.put("task_id", task.getRtmTaskId());
@@ -219,8 +318,8 @@ public class RtmTaskSource {
 	 * @throws RtmServerException
 	 * @throws UnsupportedEncodingException
 	 */
-	public void addTags(final String timelineId, final String listId,
-			final TaskDto task, final Set<String> tags) throws RtmServerException,
+	private void addTags(final String timelineId, final String listId,
+			final RtmTaskDto task, final Set<String> tags) throws RtmServerException,
 			UnsupportedEncodingException {
 		TreeMap<String, String> addTagsParams = new TreeMap<String, String>();
 		addTagsParams.put("task_id", task.getRtmTaskId());
@@ -240,8 +339,8 @@ public class RtmTaskSource {
 	 * @throws RtmServerException
 	 * @throws UnsupportedEncodingException
 	 */
-	public void addNote(final String timelineId, final String listId,
-			final TaskDto task, final NoteDto note) throws RtmServerException,
+	private void addNote(final String timelineId, final String listId,
+			final RtmTaskDto task, final NoteDto note) throws RtmServerException,
 			UnsupportedEncodingException {
 		TreeMap<String, String> addNoteParams = new TreeMap<String, String>();
 		addNoteParams.put("task_id", task.getRtmTaskId());
@@ -261,7 +360,7 @@ public class RtmTaskSource {
 	 * @param task
 	 * @throws RtmServerException
 	 */
-	public void updateCompleteFlag(final String timelineId, final String listId, final TaskDto task) throws RtmServerException {
+	private void updateCompleteFlag(final String timelineId, final String listId, final RtmTaskDto task) throws RtmServerException {
 		try {
 			TreeMap<String, String> setCompletedParams = new TreeMap<String, String>();
 			setCompletedParams.put("task_id", task.getRtmTaskId());
@@ -285,7 +384,8 @@ public class RtmTaskSource {
 	 * @return a list of tasks
 	 * @throws RtmServerException
 	 */
-	public List<TaskDto> getAllTasks(final String listId) throws RtmServerException {
+	@SuppressWarnings("unchecked")
+	private List<TaskDto> getAllTasks(final String listId) throws RtmServerException {
 		try {
 			List<TaskDto> results = new ArrayList<TaskDto>();
 			TreeMap<String, String> params = new TreeMap<String, String>();
@@ -299,25 +399,28 @@ public class RtmTaskSource {
 				Node idNode = taskSeriesNode.selectSingleNode("task/@id");
 				Node dueNode = taskSeriesNode.selectSingleNode("task/@due");
 				Node completedNode = taskSeriesNode.selectSingleNode("task/@completed");
-				TaskDto task = new TaskDto();
-				task.setRtmTaskId(idNode.getText());
-				task.setRtmTimeSeriesId(timeSeriesIdNode.getText());
-				task.setLastModified(convertStringToDate(lastModifiedNode.getText()));
-				task.setName(nameNode.getText());
-				task.setDueDate(convertStringToDate(dueNode.getText()));
-				task.setCompleted(StringUtils.isNotEmpty(completedNode.getText()));
+				RtmTaskDto rtmTask = new RtmTaskDto();
+				rtmTask.setRtmTaskId(idNode.getText());
+				rtmTask.setRtmTimeSeriesId(timeSeriesIdNode.getText());
+				rtmTask.setLastModified(convertStringToDate(lastModifiedNode.getText()));
+				rtmTask.setName(nameNode.getText());
+				rtmTask.setDueDate(convertStringToDate(dueNode.getText()));
+				rtmTask.setCompleted(StringUtils.isNotEmpty(completedNode.getText()));
 				List<Node> tagNodes = taskSeriesNode.selectNodes("tags/tag");
 				for (Node tagNode : tagNodes) {
-					task.addTag(tagNode.getText());
+					rtmTask.addTag(tagNode.getText());
 				}
 				List<Node> noteNodes = taskSeriesNode.selectNodes("notes/note");
 				for (Node noteNode : noteNodes) {
 					NoteDto note = new NoteDto();
 					note.setTitle(noteNode.selectSingleNode("@title").getText());
 					note.setBody(noteNode.getText());
-					task.addNote(note);
+					rtmTask.addNote(note);
+					if (note.getTitle().equals(EXCHANGE_ID_NOTE_TITLE)) {
+						rtmTask.setExchangeId(note.getBody());
+					}
 				}
-				results.add(task);
+				results.add(rtmTask);
 			}
 			return results;
 		} catch (UnsupportedEncodingException e) {
@@ -330,8 +433,8 @@ public class RtmTaskSource {
 			Document response = parseXML(getRtmMethodUri("rtm.auth.checkToken"));
 			Node tokenNode = response.selectSingleNode("/rsp/auth/token");
 			Node usernameNode = response.selectSingleNode("/rsp/auth/user/@username");
-			System.out.println("Logged in to RTM as " + usernameNode.getText());
-			if (tokenNode.getText().equals(settings.getAuthToken())) {
+			System.out.println("Connected to Remember The Milk as " + usernameNode.getText());
+			if (tokenNode.getText().equals(settings.getInternalSetting(INTERNAL_SETTING_AUTH_TOKEN))) {
 				return true;
 			}
 			return false;
@@ -346,12 +449,12 @@ public class RtmTaskSource {
 
 	private URI getRtmMethodUri(final String methodName, final TreeMap<String, String> params) throws UnsupportedEncodingException {
 		params.put("method", methodName);
-		params.put("auth_token", settings.getAuthToken());
+		params.put("auth_token", settings.getInternalSetting(INTERNAL_SETTING_AUTH_TOKEN));
 		return getRtmUri(REST_METHOD_PATH, params);
 	}
 
 	private URI getRtmUri(final String uriPath, final TreeMap<String, String> params) throws UnsupportedEncodingException {
-		params.put("api_key", apiKey);
+		params.put("api_key", RTM_API_KEY);
 		StringBuffer uriString = new StringBuffer("http://" + REST_HOST + uriPath + "?");
 		for (String key : params.keySet()) {
 			uriString.append(key).append("=").append(URLEncoder.encode(params.get(key), "UTF-8")).append("&");
@@ -384,12 +487,11 @@ public class RtmTaskSource {
 	}
 
 	private String getApiSig(final TreeMap<String, String> params) {
-		StringBuffer rawString = new StringBuffer(sharedSecret);
+		StringBuffer rawString = new StringBuffer(RTM_SHARED_SECRET);
 		for (String key : params.keySet()) {
 			rawString.append(key);
 			rawString.append(params.get(key));
 		}
-//		System.out.println("API_SIG RAW: " + rawString);
 		try {
 			byte[] bytesOfMessage = rawString.toString().getBytes("UTF-8");
 			MessageDigest md = MessageDigest.getInstance("MD5");

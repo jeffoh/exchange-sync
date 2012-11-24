@@ -1,6 +1,8 @@
 package com.zerodes.exchangesync.tasksource.rtm;
 
 public class RtmServerException extends Exception {
+	private static final long serialVersionUID = 1L;
+	
 	private int rtmErrorCode;
 	private String rtmMessage;
 	

@@ -1,17 +1,18 @@
 package com.zerodes.exchangesync;
 
-import java.util.List;
+import java.util.Collection;
 import java.util.Map;
 
+import com.zerodes.exchangesync.dto.TaskDto;
+import com.zerodes.exchangesync.settings.SettingsImpl;
 import com.zerodes.exchangesync.sync.SyncTasks;
-import com.zerodes.exchangesync.tasksource.exchange.ExchangeTaskSource;
-import com.zerodes.exchangesync.tasksource.exchange.dto.ExchangeTaskDto;
+import com.zerodes.exchangesync.tasksource.exchange.ExchangeTaskSourceImpl;
+import com.zerodes.exchangesync.tasksource.exchange.TaskSource;
 import com.zerodes.exchangesync.tasksource.rtm.RtmServerException;
+import com.zerodes.exchangesync.tasksource.rtm.RtmTaskSource;
 
 
 public class App {
-	private static final String RTM_API_KEY = "0bcf4c7e3182ec34f45321512e576300";
-	private static final String RTM_SHARED_SECRET = "fbf7a0bdb0011532";
 	private static final int DELAY_BETWEEN_POLLS = 300000; // 5 minutes in milliseconds
 	
 	public static void main(String[] args) {
@@ -19,36 +20,22 @@ public class App {
 		
 		try {
 			// Initialize RTM source
-			final CustomRtmTaskSource rtmSource = new CustomRtmTaskSource(RTM_API_KEY, RTM_SHARED_SECRET, settings);
-			switch (rtmSource.getAuthStatus()) {
-			case NEEDS_USER_APPROVAL:
-				System.out.println("Please go to the following URL to authorize application to sync with Remember The Milk: "
-						+ rtmSource.getAuthenticationUrl("write"));
-				settings.save();
-				return;
-			case NEEDS_AUTH_TOKEN:
-				rtmSource.completeAuthentication();
-			}
+			final TaskSource rtmSource = new RtmTaskSource(settings);
 			
 			// Initialize exchange source
-			final ExchangeTaskSource exchangeSource = new ExchangeTaskSource(settings.getExchangeHost(), settings.getExchangeUsername(), settings.getExchangePassword());
+			final ExchangeTaskSourceImpl exchangeSource = new ExchangeTaskSourceImpl(settings.getExchangeHost(), settings.getExchangeUsername(), settings.getExchangePassword());
 			
 			// Initialize synchronization engine
-			final String defaultRtmListId = rtmSource.getIdForListName(settings.getRtmListName());
-			final SyncTasks syncTasks = new CustomSyncTasks(rtmSource, exchangeSource, defaultRtmListId);
+			final SyncTasks syncTasks = new SyncTasks(exchangeSource, rtmSource);
 			
 			final TaskObserver taskObserver = new TaskObserver() {
 				@Override
-				public void taskChanged(ExchangeTaskDto task) {
-					List<ExchangeTaskDto> rtmTasks;
-					try {
-						rtmTasks = rtmSource.getTasksWithExchangeId(defaultRtmListId);
-						Map<String, ExchangeTaskDto> rtmTaskIdMap = syncTasks.generateExchangeIdMap(rtmTasks);
-						Pair<ExchangeTaskDto, ExchangeTaskDto> pair = syncTasks.generatePairForExchangeTask(rtmTaskIdMap, task);
-						syncTasks.sync(pair.getLeft(), pair.getRight());
-					} catch (RtmServerException e) {
-						e.printStackTrace();
-					}
+				public void taskChanged(TaskDto task) {
+					Collection<TaskDto> rtmTasks;
+					rtmTasks = rtmSource.getAllTasks();
+					Map<String, TaskDto> rtmTaskIdMap = syncTasks.generateExchangeIdMap(rtmTasks);
+					Pair<TaskDto, TaskDto> pair = syncTasks.generatePairForExchangeTask(rtmTaskIdMap, task);
+					syncTasks.sync(pair.getLeft(), pair.getRight());
 				}
 			};
 			exchangeSource.addTaskEventListener(taskObserver);

@@ -1,4 +1,4 @@
-package com.zerodes.exchangesync.tasksource.rtm.dto;
+package com.zerodes.exchangesync.dto;
 
 public class NoteDto {
 	private String title;

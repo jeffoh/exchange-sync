@@ -1,4 +1,4 @@
-package com.zerodes.exchangesync;
+package com.zerodes.exchangesync.settings;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -9,9 +9,8 @@ import java.io.OutputStream;
 import java.util.Properties;
 
 import com.zerodes.exchangesync.tasksource.exchange.ExchangeSettings;
-import com.zerodes.exchangesync.tasksource.rtm.RtmSettings;
 
-public class SettingsImpl implements RtmSettings, ExchangeSettings {
+public class SettingsImpl implements Settings, ExchangeSettings {
 	private Properties userSettings;
 	private Properties internalSettings;
 	
@@ -51,35 +50,6 @@ public class SettingsImpl implements RtmSettings, ExchangeSettings {
 	}
 
 	@Override
-	public String getFrob() {
-		return internalSettings.getProperty("frob");
-	}
-
-	@Override
-	public void setFrob(String frob) {
-		if (frob == null) {
-			internalSettings.remove("frob");
-		} else {
-			internalSettings.setProperty("frob", frob);
-		}
-	}
-
-	@Override
-	public String getAuthToken() {
-		return internalSettings.getProperty("authToken");
-	}
-
-	@Override
-	public void setAuthToken(String authToken) {
-		internalSettings.setProperty("authToken", authToken);
-	}
-
-	@Override
-	public String getRtmListName() {
-		return userSettings.getProperty("rtmListName");
-	}
-
-	@Override
 	public String getExchangeHost() {
 		return userSettings.getProperty("exchangeHost");
 	}
@@ -92,5 +62,25 @@ public class SettingsImpl implements RtmSettings, ExchangeSettings {
 	@Override
 	public String getExchangePassword() {
 		return userSettings.getProperty("exchangePassword");
+	}
+
+	@Override
+	public String getUserSetting(String key) {
+		return userSettings.getProperty(key);
+	}
+
+	@Override
+	public String getInternalSetting(String key) {
+		return internalSettings.getProperty(key);
+	}
+
+	@Override
+	public void setInternalSetting(String key, String value) {
+		if (value == null) {
+			internalSettings.remove(key);
+		} else {
+			internalSettings.setProperty(key, value);
+		}
+		save();
 	}
 }
