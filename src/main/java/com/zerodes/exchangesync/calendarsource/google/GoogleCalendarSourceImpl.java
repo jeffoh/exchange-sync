@@ -104,10 +104,22 @@ public class GoogleCalendarSourceImpl implements CalendarSource {
 	public Collection<AppointmentDto> getAllAppointments() {
 		final Collection<AppointmentDto> results = new HashSet<AppointmentDto>();
 		try {
-			final Events feed = client.events().list(calendarId).execute();
-			if (feed.getItems() != null) {
-				for (final Event event : feed.getItems()) {
-					results.add(convertToAppointmentDto(event));
+			int page = 1;
+			System.out.println("Retrieving Google Calendar events page " + page);
+			Events feed = client.events().list(calendarId).execute();
+			while (true) {
+				if (feed.getItems() != null) {
+					for (final Event event : feed.getItems()) {
+						results.add(convertToAppointmentDto(event));
+					}
+				}
+				String pageToken = feed.getNextPageToken();
+				if (pageToken != null && !pageToken.isEmpty()) {
+					page++;
+					System.out.println("Retrieving Google Calendar events page " + page);
+					feed = client.events().list(calendarId).setPageToken(pageToken).execute();
+				} else {
+					break;
 				}
 			}
 		} catch (final IOException ex) {
