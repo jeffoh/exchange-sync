@@ -3,9 +3,12 @@ package com.zerodes.exchangesync;
 import java.util.Collection;
 import java.util.Map;
 
+import com.zerodes.exchangesync.calendarsource.CalendarSource;
+import com.zerodes.exchangesync.calendarsource.google.GoogleCalendarSourceImpl;
 import com.zerodes.exchangesync.dto.TaskDto;
 import com.zerodes.exchangesync.exchange.ExchangeSourceImpl;
 import com.zerodes.exchangesync.settings.SettingsImpl;
+import com.zerodes.exchangesync.sync.SyncCalendarsImpl;
 import com.zerodes.exchangesync.sync.SyncTasksImpl;
 import com.zerodes.exchangesync.tasksource.TaskSource;
 import com.zerodes.exchangesync.tasksource.rtm.RtmServerException;
@@ -19,14 +22,18 @@ public class App {
 		SettingsImpl settings = new SettingsImpl();
 		
 		try {
-			// Initialize RTM source
-			final TaskSource rtmSource = new RtmTaskSourceImpl(settings);
-			
 			// Initialize exchange source
 			final ExchangeSourceImpl exchangeSource = new ExchangeSourceImpl(settings.getExchangeHost(), settings.getExchangeUsername(), settings.getExchangePassword());
 			
-			// Initialize synchronization engine
+			// Initialize RTM source
+			final TaskSource rtmSource = new RtmTaskSourceImpl(settings);
+			
+			// Initialize Google source
+			final CalendarSource googleSource = new GoogleCalendarSourceImpl(settings);
+			
+			// Initialize synchronization engines
 			final SyncTasksImpl syncTasks = new SyncTasksImpl(exchangeSource, rtmSource);
+			final SyncCalendarsImpl syncCalendars = new SyncCalendarsImpl(exchangeSource, googleSource);
 			
 			final TaskObserver taskObserver = new TaskObserver() {
 				@Override
@@ -40,7 +47,9 @@ public class App {
 			exchangeSource.addTaskEventListener(taskObserver);
 
 			while(true) {
-				System.out.println("Synchronizing all tasks...");
+				System.out.println("Synchronizing calendars...");
+				syncCalendars.syncAll();
+				System.out.println("Synchronizing tasks...");
 				syncTasks.syncAll();
 				System.out.println("Waiting for events...");
 				Thread.sleep(DELAY_BETWEEN_POLLS);
