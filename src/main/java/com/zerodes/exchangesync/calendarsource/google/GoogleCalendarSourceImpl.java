@@ -143,7 +143,9 @@ public class GoogleCalendarSourceImpl implements CalendarSource {
 				final PersonDto person = new PersonDto();
 				person.setName(eventAttendee.getDisplayName());
 				person.setEmail(eventAttendee.getEmail());
-				person.setOptional(eventAttendee.getOptional());
+				if (eventAttendee.getOptional() != null) {
+					person.setOptional(eventAttendee.getOptional());
+				}
 				attendees.add(person);
 			}
 			result.setAttendees(attendees);
