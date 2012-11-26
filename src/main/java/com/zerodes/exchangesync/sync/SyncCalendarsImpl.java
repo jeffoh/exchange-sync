@@ -54,7 +54,8 @@ public class SyncCalendarsImpl {
 		} else if (exchangeCalendarEntry != null && otherCalendarEntry != null) {
 			if (exchangeCalendarEntry.getLastModified().after(otherCalendarEntry.getLastModified())) {
 				// Exchange CalendarEntry has a more recent modified date, so modify other CalendarEntry
-				otherSource.updateAppointment(exchangeCalendarEntry);
+				exchangeCalendarEntry.copyTo(otherCalendarEntry);
+				otherSource.updateAppointment(otherCalendarEntry);
 				stats.appointmentUpdated();
 			} else {
 				// Other CalendarEntry has a more recent modified date, so modify Exchange

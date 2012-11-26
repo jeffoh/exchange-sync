@@ -234,7 +234,7 @@ public class GoogleCalendarSourceImpl implements CalendarSource {
 	}
 
 	@Override
-	public void updateAppointment(AppointmentDto appointmentDto) {
+	public void updateAppointment(final AppointmentDto appointmentDto) {
 		GoogleAppointmentDto googleAppointmentDto = (GoogleAppointmentDto) appointmentDto;
 		try {
 			Event event = client.events().get(calendarId, googleAppointmentDto.getGoogleId()).execute();
@@ -246,7 +246,7 @@ public class GoogleCalendarSourceImpl implements CalendarSource {
 	}
 
 	@Override
-	public void deleteAppointment(AppointmentDto appointmentDto) {
+	public void deleteAppointment(final AppointmentDto appointmentDto) {
 		GoogleAppointmentDto googleAppointmentDto = (GoogleAppointmentDto) appointmentDto;
 		try {
 			client.events().delete(calendarId, googleAppointmentDto.getGoogleId()).execute();
