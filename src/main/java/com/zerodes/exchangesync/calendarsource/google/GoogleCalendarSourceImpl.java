@@ -41,10 +41,10 @@ import com.zerodes.exchangesync.settings.Settings;
 
 public class GoogleCalendarSourceImpl implements CalendarSource {
 
-	private static final String USER_SETTING_CLIENT_ID = "googleClientId";
-
-	private static final String USER_SETTING_CLIENT_SECRET = "googleClientSecret";
-
+	// Google Id and Secret from https://code.google.com/apis/console/?pli=1#project:861974414961:access
+	private static final String GOOGLE_CLIENT_ID = "861974414961.apps.googleusercontent.com";
+	private static final String GOOGLE_CLIENT_SECRET = "RsmjfTuIDbNxLU_MdPOlvgVR";
+		
 	private static final String USER_SETTING_CALENDAR_NAME = "googleCalendarName";
 	
 	private static final String EXT_PROPERTY_EXCHANGE_ID = "exchangeId";
@@ -55,19 +55,16 @@ public class GoogleCalendarSourceImpl implements CalendarSource {
 	/** Global instance of the JSON factory. */
 	private final JsonFactory JSON_FACTORY = new JacksonFactory();
 
-	private final Settings settings;
-
 	private com.google.api.services.calendar.Calendar client;
 
 	private String calendarId;
 
 	public GoogleCalendarSourceImpl(final Settings settings) {
-		this.settings = settings;
 		try {
 			System.out.println("Connecting to Google Calendar...");
 			Credential credential = authorize();
 			client = new com.google.api.services.calendar.Calendar.Builder(HTTP_TRANSPORT, JSON_FACTORY, credential)
-				.setApplicationName("Google-CalendarSample/1.0")
+				.setApplicationName("Exchange Sync/1.0")
 				.build();
 			calendarId = getCalendarId(settings.getUserSetting(USER_SETTING_CALENDAR_NAME));
 			System.out.println("Connected to Google Calendar.");
@@ -78,15 +75,12 @@ public class GoogleCalendarSourceImpl implements CalendarSource {
 
 	/** Authorizes the installed application to access user's protected data. */
 	private Credential authorize() throws Exception {
-		final String clientId = settings.getUserSetting(USER_SETTING_CLIENT_ID);
-		final String clientSecret = settings.getUserSetting(USER_SETTING_CLIENT_SECRET);
-
 		// set up file credential store
 		FileCredentialStore credentialStore = new FileCredentialStore(
 				new File(System.getProperty("user.home"), ".credentials/calendar.json"), JSON_FACTORY);
 		// set up authorization code flow
 		final GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(
-				HTTP_TRANSPORT, JSON_FACTORY, clientId, clientSecret, Collections.singleton(CalendarScopes.CALENDAR))
+				HTTP_TRANSPORT, JSON_FACTORY, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, Collections.singleton(CalendarScopes.CALENDAR))
 			.setCredentialStore(credentialStore)
 			.build();
 		// authorize
