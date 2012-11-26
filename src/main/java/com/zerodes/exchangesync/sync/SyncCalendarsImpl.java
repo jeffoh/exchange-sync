@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.zerodes.exchangesync.Pair;
+import com.zerodes.exchangesync.StatisticsCollector;
 import com.zerodes.exchangesync.calendarsource.CalendarSource;
 import com.zerodes.exchangesync.dto.AppointmentDto;
 
@@ -37,28 +38,33 @@ public class SyncCalendarsImpl {
 	 * @param exchangeCalendarEntry Exchange CalendarEntry (or null if no matching CalendarEntry exists)
 	 * @param otherCalendarEntry CalendarEntry from "other" data source (or null if no matching CalendarEntry exists)
 	 */
-	public void sync(AppointmentDto exchangeCalendarEntry, AppointmentDto otherCalendarEntry) {
+	public void sync(final AppointmentDto exchangeCalendarEntry, final AppointmentDto otherCalendarEntry, final StatisticsCollector stats) {
 		if (exchangeCalendarEntry != null && otherCalendarEntry == null) {
 			otherSource.addAppointment(exchangeCalendarEntry);
+			stats.appointmentAdded();
 		} else if (exchangeCalendarEntry == null && otherCalendarEntry != null && otherCalendarEntry.getExchangeId() != null) {
 			otherSource.deleteAppointment(otherCalendarEntry);
+			stats.appointmentDeleted();
 		} else if (exchangeCalendarEntry != null && otherCalendarEntry != null) {
 			if (exchangeCalendarEntry.getLastModified().after(otherCalendarEntry.getLastModified())) {
 				// Exchange CalendarEntry has a more recent modified date, so modify other CalendarEntry
 				otherSource.updateAppointment(exchangeCalendarEntry);
+				stats.appointmentUpdated();
 			} else {
 				// Other CalendarEntry has a more recent modified date, so modify Exchange
 			}
 		}
 	}
 
-	public void syncAll() {
+	public void syncAll(final StatisticsCollector stats) {
+		System.out.println("Synchronizing calendars...");
+
 		// Generate matching pairs of CalendarEntrys
 		List<Pair<AppointmentDto, AppointmentDto>> pairs = generatePairs();
 
 		// Create/complete/delete as required
 		for (Pair<AppointmentDto, AppointmentDto> pair : pairs) {
-			sync(pair.getLeft(), pair.getRight());
+			sync(pair.getLeft(), pair.getRight(), stats);
 		}
 	}
 

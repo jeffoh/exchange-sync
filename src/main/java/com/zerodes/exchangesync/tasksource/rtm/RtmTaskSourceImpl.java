@@ -66,7 +66,6 @@ public class RtmTaskSourceImpl implements TaskSource {
 			}
 			this.defaultRtmListId = getIdForListName(settings.getUserSetting(USER_SETTING_RTM_LIST_NAME));
 		} catch (RtmServerException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}

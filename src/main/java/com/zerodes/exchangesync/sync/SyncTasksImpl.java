@@ -9,6 +9,7 @@ import java.util.Map;
 import org.apache.commons.lang.ObjectUtils;
 
 import com.zerodes.exchangesync.Pair;
+import com.zerodes.exchangesync.StatisticsCollector;
 import com.zerodes.exchangesync.dto.TaskDto;
 import com.zerodes.exchangesync.tasksource.TaskSource;
 
@@ -39,41 +40,38 @@ public class SyncTasksImpl {
 	 * @param exchangeTask Exchange task (or null if no matching task exists)
 	 * @param otherTask Task from "other" data source (or null if no matching task exists)
 	 */
-	public void sync(TaskDto exchangeTask, TaskDto otherTask) {
+	public void sync(final TaskDto exchangeTask, final TaskDto otherTask, final StatisticsCollector stats) {
 		if (exchangeTask != null && !exchangeTask.isCompleted() && otherTask == null) {
 			otherSource.addTask(exchangeTask);
+			stats.taskAdded();
 		} else if (exchangeTask != null && otherTask != null) {
 			if (exchangeTask.getLastModified().after(otherTask.getLastModified())) {
 				// Exchange task has a more recent modified date, so modify other task
 				if (exchangeTask.isCompleted() != otherTask.isCompleted()) {
 					otherTask.setCompleted(exchangeTask.isCompleted());
 					otherSource.updateCompletedFlag(otherTask);
+					stats.taskUpdated();
 				}
 				if (!ObjectUtils.equals(exchangeTask.getDueDate(), otherTask.getDueDate())) {
 					otherTask.setDueDate(exchangeTask.getDueDate());
 					otherSource.updateDueDate(otherTask);
+					stats.taskUpdated();
 				}
 			} else {
 				// Other task has a more recent modified date, so modify Exchange
-				if (exchangeTask.isCompleted() != otherTask.isCompleted()) {
-					exchangeTask.setCompleted(otherTask.isCompleted());
-					exchangeSource.updateCompletedFlag(exchangeTask);
-				}
-				if (!ObjectUtils.equals(exchangeTask.getDueDate(), otherTask.getDueDate())) {
-					exchangeTask.setDueDate(otherTask.getDueDate());
-					exchangeSource.updateDueDate(exchangeTask);
-				}
 			}
 		}
 	}
 
-	public void syncAll() {
+	public void syncAll(final StatisticsCollector stats) {
+		System.out.println("Synchronizing tasks...");
+
 		// Generate matching pairs of tasks
 		List<Pair<TaskDto, TaskDto>> pairs = generatePairs();
 
 		// Create/complete/delete as required
 		for (Pair<TaskDto, TaskDto> pair : pairs) {
-			sync(pair.getLeft(), pair.getRight());
+			sync(pair.getLeft(), pair.getRight(), stats);
 		}
 	}
 

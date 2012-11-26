@@ -18,7 +18,6 @@ import microsoft.exchange.webservices.data.CalendarView;
 import microsoft.exchange.webservices.data.ConflictResolutionMode;
 import microsoft.exchange.webservices.data.EmailAddress;
 import microsoft.exchange.webservices.data.EmailMessage;
-import microsoft.exchange.webservices.data.EventType;
 import microsoft.exchange.webservices.data.ExchangeCredentials;
 import microsoft.exchange.webservices.data.ExchangeService;
 import microsoft.exchange.webservices.data.ExtendedProperty;
@@ -31,31 +30,22 @@ import microsoft.exchange.webservices.data.FolderSchema;
 import microsoft.exchange.webservices.data.FolderTraversal;
 import microsoft.exchange.webservices.data.FolderView;
 import microsoft.exchange.webservices.data.Item;
-import microsoft.exchange.webservices.data.ItemEvent;
 import microsoft.exchange.webservices.data.ItemId;
 import microsoft.exchange.webservices.data.ItemView;
 import microsoft.exchange.webservices.data.LogicalOperator;
 import microsoft.exchange.webservices.data.MapiPropertyType;
 import microsoft.exchange.webservices.data.MeetingRequest;
 import microsoft.exchange.webservices.data.MessageBody;
-import microsoft.exchange.webservices.data.NotificationEvent;
-import microsoft.exchange.webservices.data.NotificationEventArgs;
 import microsoft.exchange.webservices.data.PropertySet;
 import microsoft.exchange.webservices.data.Recurrence;
 import microsoft.exchange.webservices.data.SearchFilter;
 import microsoft.exchange.webservices.data.SearchFilter.SearchFilterCollection;
 import microsoft.exchange.webservices.data.ServiceLocalException;
-import microsoft.exchange.webservices.data.StreamingSubscription;
-import microsoft.exchange.webservices.data.StreamingSubscriptionConnection;
-import microsoft.exchange.webservices.data.StreamingSubscriptionConnection.INotificationEventDelegate;
-import microsoft.exchange.webservices.data.StreamingSubscriptionConnection.ISubscriptionErrorDelegate;
-import microsoft.exchange.webservices.data.SubscriptionErrorEventArgs;
 import microsoft.exchange.webservices.data.WebCredentials;
 import microsoft.exchange.webservices.data.WellKnownFolderName;
 
 import org.joda.time.DateTime;
 
-import com.zerodes.exchangesync.TaskObserver;
 import com.zerodes.exchangesync.calendarsource.CalendarSource;
 import com.zerodes.exchangesync.dto.AppointmentDto;
 import com.zerodes.exchangesync.dto.AppointmentDto.RecurrenceType;
@@ -103,7 +93,6 @@ public class ExchangeSourceImpl implements TaskSource, CalendarSource {
 	private static final int PR_FLAG_STATUS_FOLLOWUP_FLAGGED = 2;
 
 	private final ExchangeService service;
-	private final ExchangeEventsHandler eventsHandler;
 
 	public ExchangeSourceImpl(final ExchangeSettings settings) throws Exception {
 		System.out.println("Connecting to Exchange (" + settings.getExchangeHost() + ") as " + settings.getExchangeUsername() + "...");
@@ -121,67 +110,7 @@ public class ExchangeSourceImpl implements TaskSource, CalendarSource {
 		}
 		service.setTraceEnabled(ENABLE_DEBUGGING);
 
-		// Setup a streaming subscription
-		// http://blogs.msdn.com/b/exchangedev/archive/2010/12/22/working-with-streaming-notifications-by-using-the-ews-managed-api.aspx
-		final StreamingSubscription streamingsubscription = service.subscribeToStreamingNotificationsOnAllFolders(EventType.Modified);
-		final StreamingSubscriptionConnection connection = new StreamingSubscriptionConnection(service, SUBSCRIPTION_TIMEOUT);
-		connection.addSubscription(streamingsubscription);
-		eventsHandler = new ExchangeEventsHandler();
-		connection.addOnDisconnect(eventsHandler);
-		connection.addOnNotificationEvent(eventsHandler);
-		connection.addOnSubscriptionError(eventsHandler);
-		connection.open();
-
 		System.out.println("Connected to Exchange");
-	}
-
-	private class ExchangeEventsHandler implements ISubscriptionErrorDelegate, INotificationEventDelegate {
-
-		private final Set<TaskObserver> taskEventObservers = new HashSet<TaskObserver>();
-
-		@Override
-		public void subscriptionErrorDelegate(final Object sender, final SubscriptionErrorEventArgs args) {
-			final StreamingSubscriptionConnection connection = (StreamingSubscriptionConnection) sender;
-			if (args.getException() != null) {
-				args.getException().printStackTrace();
-			} else {
-				try {
-					System.out.println("Reconnected to Exchange streaming service.");
-					connection.open();
-				} catch (final ServiceLocalException e) {
-					e.printStackTrace();
-				} catch (final Exception e) {
-					e.printStackTrace();
-				}
-			}
-		}
-
-		@Override
-		public void notificationEventDelegate(final Object sender, final NotificationEventArgs args) {
-			try {
-				for (final NotificationEvent event : args.getEvents()) {
-					if (event instanceof ItemEvent) {
-						final ItemEvent itemEvent = (ItemEvent) event;
-						final Item email = Item.bind(service, itemEvent.getItemId(), createEmailPropertySet());
-						if (email != null) {
-							notifyTaskEventListeners(convertToTaskDto((EmailMessage) email));
-						}
-					}
-				}
-			} catch (final Exception e) {
-				e.printStackTrace();
-			}
-		}
-
-		public void addTaskEventListener(final TaskObserver observer) {
-			taskEventObservers.add(observer);
-		}
-
-		public void notifyTaskEventListeners(final TaskDto task) {
-			for (final TaskObserver observer : taskEventObservers) {
-				observer.taskChanged(task);
-			}
-		}
 	}
 
 	@Override
@@ -391,10 +320,6 @@ public class ExchangeSourceImpl implements TaskSource, CalendarSource {
 		final PropertySet propertySet = new PropertySet(BasePropertySet.FirstClassProperties);
 		propertySet.setRequestedBodyType(BodyType.Text);
 		return propertySet;
-	}
-
-	public void addTaskEventListener(final TaskObserver observer) {
-		eventsHandler.addTaskEventListener(observer);
 	}
 
 	@Override
