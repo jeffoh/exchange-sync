@@ -1,10 +1,10 @@
 package com.zerodes.exchangesync.sync;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.List;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.lang.ObjectUtils;
 
@@ -23,8 +23,8 @@ public class SyncTasksImpl {
 		this.otherSource = otherSource;
 	}
 
-	protected List<Pair<TaskDto, TaskDto>> generatePairs() {
-		List<Pair<TaskDto, TaskDto>> results = new ArrayList<Pair<TaskDto, TaskDto>>();
+	protected Set<Pair<TaskDto, TaskDto>> generatePairs() {
+		Set<Pair<TaskDto, TaskDto>> results = new HashSet<Pair<TaskDto, TaskDto>>();
 		Collection<TaskDto> otherTasks = otherSource.getAllTasks();
 		Collection<TaskDto> exchangeTasks = exchangeSource.getAllTasks();
 		Map<String, TaskDto> otherTasksMap = generateExchangeIdMap(otherTasks);
@@ -67,7 +67,7 @@ public class SyncTasksImpl {
 		System.out.println("Synchronizing tasks...");
 
 		// Generate matching pairs of tasks
-		List<Pair<TaskDto, TaskDto>> pairs = generatePairs();
+		Set<Pair<TaskDto, TaskDto>> pairs = generatePairs();
 
 		// Create/complete/delete as required
 		for (Pair<TaskDto, TaskDto> pair : pairs) {

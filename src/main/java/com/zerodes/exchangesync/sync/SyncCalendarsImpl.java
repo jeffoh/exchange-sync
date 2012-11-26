@@ -1,10 +1,10 @@
 package com.zerodes.exchangesync.sync;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.List;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import com.zerodes.exchangesync.Pair;
 import com.zerodes.exchangesync.StatisticsCollector;
@@ -21,13 +21,19 @@ public class SyncCalendarsImpl {
 		this.otherSource = otherSource;
 	}
 
-	protected List<Pair<AppointmentDto, AppointmentDto>> generatePairs() {
-		List<Pair<AppointmentDto, AppointmentDto>> results = new ArrayList<Pair<AppointmentDto, AppointmentDto>>();
-		Collection<AppointmentDto> otherCalendarEntrys = otherSource.getAllAppointments();
-		Collection<AppointmentDto> exchangeCalendarEntrys = exchangeSource.getAllAppointments();
-		Map<String, AppointmentDto> otherCalendarEntrysMap = generateExchangeIdMap(otherCalendarEntrys);
-		for (AppointmentDto exchangeCalendarEntry : exchangeCalendarEntrys) {
-			results.add(generatePairForExchangeCalendarEntry(otherCalendarEntrysMap, exchangeCalendarEntry));
+	protected Set<Pair<AppointmentDto, AppointmentDto>> generatePairs() {
+		Set<Pair<AppointmentDto, AppointmentDto>> results = new HashSet<Pair<AppointmentDto, AppointmentDto>>();
+		Collection<AppointmentDto> otherAppointments = otherSource.getAllAppointments();
+		Collection<AppointmentDto> exchangeAppointments = exchangeSource.getAllAppointments();
+		Map<String, AppointmentDto> otherAppointmentsMap = generateExchangeIdMap(otherAppointments);
+		Map<String, AppointmentDto> exchangeAppointmentsMap = generateExchangeIdMap(exchangeAppointments);
+		for (AppointmentDto exchangeAppointment : exchangeAppointments) {
+			AppointmentDto otherAppointment = otherAppointmentsMap.get(exchangeAppointment.getExchangeId());
+			results.add(new Pair<AppointmentDto, AppointmentDto>(exchangeAppointment, otherAppointment));
+		}
+		for (AppointmentDto otherAppointment : otherAppointments) {
+			AppointmentDto exchangeAppointment = exchangeAppointmentsMap.get(otherAppointment.getExchangeId());
+			results.add(new Pair<AppointmentDto, AppointmentDto>(exchangeAppointment, otherAppointment));
 		}
 		return results;
 	}
@@ -60,7 +66,7 @@ public class SyncCalendarsImpl {
 		System.out.println("Synchronizing calendars...");
 
 		// Generate matching pairs of CalendarEntrys
-		List<Pair<AppointmentDto, AppointmentDto>> pairs = generatePairs();
+		Set<Pair<AppointmentDto, AppointmentDto>> pairs = generatePairs();
 
 		// Create/complete/delete as required
 		for (Pair<AppointmentDto, AppointmentDto> pair : pairs) {
@@ -74,10 +80,5 @@ public class SyncCalendarsImpl {
 			results.put(CalendarEntry.getExchangeId(), CalendarEntry);
 		}
 		return results;
-	}
-
-	public Pair<AppointmentDto, AppointmentDto> generatePairForExchangeCalendarEntry(Map<String, AppointmentDto> otherCalendarEntryIdMap, AppointmentDto exchangeCalendarEntry) {
-		AppointmentDto otherCalendarEntry = otherCalendarEntryIdMap.get(exchangeCalendarEntry.getExchangeId());
-		return new Pair<AppointmentDto, AppointmentDto>(exchangeCalendarEntry, otherCalendarEntry);
 	}
 }

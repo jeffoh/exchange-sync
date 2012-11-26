@@ -4,6 +4,9 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.apache.commons.lang.builder.EqualsBuilder;
+import org.apache.commons.lang.builder.HashCodeBuilder;
+
 public class TaskDto {
 	private String exchangeId;
 	private Date lastModified;
@@ -97,5 +100,38 @@ public class TaskDto {
 		dest.completed = completed;
 		dest.tags = tags;
 		dest.notes = notes;
+	}
+
+	@Override
+	public int hashCode() {
+		return new HashCodeBuilder()
+			.append(exchangeId)
+			.append(lastModified)
+			.append(name)
+			.append(dueDate)
+			.append(priority)
+			.append(url)
+			.append(completed)
+			.toHashCode();
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		TaskDto other = (TaskDto) obj;
+		return new EqualsBuilder()
+			.append(exchangeId, other.exchangeId)
+			.append(lastModified, other.lastModified)
+			.append(name, other.name)
+			.append(dueDate, other.dueDate)
+			.append(priority, other.priority)
+			.append(url, other.url)
+			.append(completed, other.completed)
+			.isEquals();
 	}
 }

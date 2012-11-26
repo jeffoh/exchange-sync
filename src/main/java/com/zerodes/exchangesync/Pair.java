@@ -1,5 +1,8 @@
 package com.zerodes.exchangesync;
 
+import org.apache.commons.lang.builder.EqualsBuilder;
+import org.apache.commons.lang.builder.HashCodeBuilder;
+
 public class Pair<L, R> {
 
 	private final L left;
@@ -20,7 +23,10 @@ public class Pair<L, R> {
 
 	@Override
 	public int hashCode() {
-		return left.hashCode() ^ right.hashCode();
+		return new HashCodeBuilder()
+			.append(left)
+			.append(right)
+			.toHashCode();
 	}
 
 	@SuppressWarnings("rawtypes")
@@ -30,9 +36,11 @@ public class Pair<L, R> {
 			return false;
 		if (!(o instanceof Pair))
 			return false;
-		Pair pairo = (Pair) o;
-		return this.left.equals(pairo.getLeft())
-				&& this.right.equals(pairo.getRight());
+		Pair other = (Pair) o;
+		return new EqualsBuilder()
+			.append(left, other.left)
+			.append(right, other.right)
+			.isEquals();
 	}
 
 }
