@@ -52,7 +52,7 @@ public class SyncCalendarsImpl {
 			otherSource.deleteAppointment(otherCalendarEntry);
 			stats.appointmentDeleted();
 		} else if (exchangeCalendarEntry != null && otherCalendarEntry != null) {
-			if (exchangeCalendarEntry.getLastModified().after(otherCalendarEntry.getLastModified())) {
+			if (exchangeCalendarEntry.getLastModified().isAfter(otherCalendarEntry.getLastModified())) {
 				// Exchange CalendarEntry has a more recent modified date, so modify other CalendarEntry
 				exchangeCalendarEntry.copyTo(otherCalendarEntry);
 				otherSource.updateAppointment(otherCalendarEntry);

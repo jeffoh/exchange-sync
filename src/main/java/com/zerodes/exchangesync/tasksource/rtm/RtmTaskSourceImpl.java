@@ -10,7 +10,6 @@ import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Date;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeMap;
@@ -21,6 +20,7 @@ import org.dom4j.Document;
 import org.dom4j.DocumentException;
 import org.dom4j.Node;
 import org.dom4j.io.SAXReader;
+import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
 
@@ -284,7 +284,7 @@ public class RtmTaskSourceImpl implements TaskSource {
 		setDueDateParams.put("taskseries_id", task.getRtmTimeSeriesId());
 		setDueDateParams.put("timeline", timelineId);
 		setDueDateParams.put("list_id", listId);
-		setDueDateParams.put("due", convertDateToString(task.getDueDate()));
+		setDueDateParams.put("due", convertJodaDateTimeToString(task.getDueDate()));
 		parseXML(getRtmMethodUri("rtm.tasks.setDueDate", setDueDateParams));
 	}
 
@@ -401,9 +401,9 @@ public class RtmTaskSourceImpl implements TaskSource {
 				RtmTaskDto rtmTask = new RtmTaskDto();
 				rtmTask.setRtmTaskId(idNode.getText());
 				rtmTask.setRtmTimeSeriesId(timeSeriesIdNode.getText());
-				rtmTask.setLastModified(convertStringToDate(lastModifiedNode.getText()));
+				rtmTask.setLastModified(convertStringToJodaDateTime(lastModifiedNode.getText()));
 				rtmTask.setName(nameNode.getText());
-				rtmTask.setDueDate(convertStringToDate(dueNode.getText()));
+				rtmTask.setDueDate(convertStringToJodaDateTime(dueNode.getText()));
 				rtmTask.setCompleted(StringUtils.isNotEmpty(completedNode.getText()));
 				List<Node> tagNodes = taskSeriesNode.selectNodes("tags/tag");
 				for (Node tagNode : tagNodes) {
@@ -503,16 +503,16 @@ public class RtmTaskSourceImpl implements TaskSource {
 		}
 	}
 	
-	private String convertDateToString(Date theDate) {
+	private String convertJodaDateTimeToString(DateTime theDate) {
 		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-		return dateFormat.format(theDate) + "T23:00:00Z";
+		return dateFormat.format(theDate.toDate()) + "T23:00:00Z";
 	}
 
-	private Date convertStringToDate(String theDate) {
+	private DateTime convertStringToJodaDateTime(String theDate) {
 		if (StringUtils.isEmpty(theDate)) {
 			return null;
 		}
 		DateTimeFormatter dateFormat = ISODateTimeFormat.dateTimeNoMillis();
-		return dateFormat.parseDateTime(theDate).toDate();
+		return new DateTime(dateFormat.parseDateTime(theDate).toDate());
 	}
 }

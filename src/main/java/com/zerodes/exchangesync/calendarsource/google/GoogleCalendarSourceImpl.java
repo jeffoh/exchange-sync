@@ -5,12 +5,13 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import org.joda.time.DateTimeZone;
 
 import com.google.api.client.auth.oauth2.Credential;
 import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp;
@@ -132,10 +133,10 @@ public class GoogleCalendarSourceImpl implements CalendarSource {
 		final GoogleAppointmentDto result = new GoogleAppointmentDto();
 		result.setGoogleId(event.getId());
 		result.setExchangeId(event.getExtendedProperties().getPrivate().get(EXT_PROPERTY_EXCHANGE_ID));
-		result.setLastModified(convertToDate(event.getUpdated()));
+		result.setLastModified(convertToJodaDateTime(event.getUpdated()));
 		result.setSummary(event.getSummary());
 		result.setDescription(event.getDescription());
-		result.setStart(convertToDate(event.getStart()));
+		result.setStart(convertToJodaDateTime(event.getStart()));
 		result.setLocation(event.getLocation());
 		if (event.getOrganizer() != null) {
 			final PersonDto person = new PersonDto();
@@ -255,25 +256,26 @@ public class GoogleCalendarSourceImpl implements CalendarSource {
 		}
 	}
 
-	private DateTime convertToDateTime(final Date date) {
-		return new DateTime(new Date(date.getTime()));
+	private DateTime convertToDateTime(final org.joda.time.DateTime date) {
+		return new DateTime(date.getMillis());
 	}
 
-	private EventDateTime convertToEventDateTime(final Date date) {
+	private EventDateTime convertToEventDateTime(final org.joda.time.DateTime date) {
 		final EventDateTime result = new EventDateTime();
 		result.setDateTime(convertToDateTime(date));
 		result.setTimeZone("UTC");
 		return result;
 	}
 
-	private Date convertToDate(final DateTime googleTime) {
+	private org.joda.time.DateTime convertToJodaDateTime(final DateTime googleTime) {
 		if (googleTime == null) {
 			return null;
 		}
-		return new Date(googleTime.getValue() + java.util.TimeZone.getDefault().getRawOffset());
+		org.joda.time.DateTime jodaDate = new org.joda.time.DateTime(googleTime.getValue(), DateTimeZone.UTC);
+		return jodaDate;
 	}
 
-	private Date convertToDate(final EventDateTime googleTime) {
-		return convertToDate(googleTime.getDateTime());
+	private org.joda.time.DateTime convertToJodaDateTime(final EventDateTime googleTime) {
+		return convertToJodaDateTime(googleTime.getDateTime());
 	}
 }

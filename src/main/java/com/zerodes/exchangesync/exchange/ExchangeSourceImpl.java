@@ -45,6 +45,7 @@ import microsoft.exchange.webservices.data.WebCredentials;
 import microsoft.exchange.webservices.data.WellKnownFolderName;
 
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 
 import com.zerodes.exchangesync.calendarsource.CalendarSource;
 import com.zerodes.exchangesync.dto.AppointmentDto;
@@ -56,7 +57,6 @@ import com.zerodes.exchangesync.tasksource.TaskSource;
 
 public class ExchangeSourceImpl implements TaskSource, CalendarSource {
 	private static final int MAX_RESULTS = 1000;
-	private static final int SUBSCRIPTION_TIMEOUT = 30; // in minutes
 	private static final boolean ENABLE_DEBUGGING = false;
 
 	private static final UUID PROPERTY_SET_TASK = UUID.fromString("00062003-0000-0000-C000-000000000046");
@@ -174,14 +174,14 @@ public class ExchangeSourceImpl implements TaskSource, CalendarSource {
 		}
 		final TaskDto task = new TaskDto();
 		task.setExchangeId(email.getId().getUniqueId());
-		task.setLastModified(getCorrectedExchangeTime(email.getLastModifiedTime()));
+		task.setLastModified(convertToJodaDateTime(email.getLastModifiedTime()));
 		task.setName(email.getSubject());
 		if (flagValue == null) {
 			throw new RuntimeException("Found email without follow-up flag!");
 		} else if (flagValue == PR_FLAG_STATUS_FOLLOWUP_COMPLETE) {
 			task.setCompleted(true);
 		}
-		task.setDueDate(dueDate);
+		task.setDueDate(convertToJodaDateTime(dueDate));
 		return task;
 	}
 	
@@ -197,15 +197,15 @@ public class ExchangeSourceImpl implements TaskSource, CalendarSource {
 	public AppointmentDto convertToAppointmentDto(final Appointment appointment) throws ServiceLocalException {
 		final AppointmentDto appointmentDto = new AppointmentDto();
 		appointmentDto.setExchangeId(appointment.getId().getUniqueId());
-		appointmentDto.setLastModified(getCorrectedExchangeTime(appointment.getLastModifiedTime()));
+		appointmentDto.setLastModified(convertToJodaDateTime(appointment.getLastModifiedTime()));
 		appointmentDto.setSummary(appointment.getSubject());
 		try {
 			appointmentDto.setDescription(MessageBody.getStringFromMessageBody(appointment.getBody()));
 		} catch (final Exception e) {
 			e.printStackTrace();
 		}
-		appointmentDto.setStart(getCorrectedExchangeTime(appointment.getStart()));
-		appointmentDto.setEnd(getCorrectedExchangeTime(appointment.getEnd()));
+		appointmentDto.setStart(convertToJodaDateTime(appointment.getStart()));
+		appointmentDto.setEnd(convertToJodaDateTime(appointment.getEnd()));
 		appointmentDto.setLocation(appointment.getLocation());
 		if (appointment.getOrganizer() != null) {
 			appointmentDto.setOrganizer(convertToPersonDto(appointment.getOrganizer(), false));
@@ -241,15 +241,15 @@ public class ExchangeSourceImpl implements TaskSource, CalendarSource {
 	public AppointmentDto convertToAppointmentDto(final MeetingRequest meeting) throws ServiceLocalException {
 		final AppointmentDto appointmentDto = new AppointmentDto();
 		appointmentDto.setExchangeId(meeting.getId().getUniqueId());
-		appointmentDto.setLastModified(getCorrectedExchangeTime(meeting.getLastModifiedTime()));
+		appointmentDto.setLastModified(convertToJodaDateTime(meeting.getLastModifiedTime()));
 		appointmentDto.setSummary(meeting.getSubject());
 		try {
 			appointmentDto.setDescription(MessageBody.getStringFromMessageBody(meeting.getBody()));
 		} catch (final Exception e) {
 			e.printStackTrace();
 		}
-		appointmentDto.setStart(getCorrectedExchangeTime(meeting.getStart()));
-		appointmentDto.setEnd(getCorrectedExchangeTime(meeting.getEnd()));
+		appointmentDto.setStart(convertToJodaDateTime(meeting.getStart()));
+		appointmentDto.setEnd(convertToJodaDateTime(meeting.getEnd()));
 		appointmentDto.setLocation(meeting.getLocation());
 		if (meeting.getOrganizer() != null) {
 			appointmentDto.setOrganizer(convertToPersonDto(meeting.getOrganizer(), false));
@@ -289,7 +289,7 @@ public class ExchangeSourceImpl implements TaskSource, CalendarSource {
 	 * @param theDate the date returned from EWS
 	 * @return theDate converted to local time
 	 */
-	private Date getCorrectedExchangeTime(final Date theDate) {
+	private DateTime convertToJodaDateTime(final Date theDate) {
 		final TimeZone tz = Calendar.getInstance().getTimeZone();
 
 		final long msFromEpochGmt = theDate.getTime();
@@ -299,10 +299,8 @@ public class ExchangeSourceImpl implements TaskSource, CalendarSource {
 
 		// create a new calendar in GMT timezone, set to this date and add the
 		// offset
-		final Calendar newTime = Calendar.getInstance();
-		newTime.setTime(theDate);
-		newTime.add(Calendar.MILLISECOND, offsetFromUTC);
-		return newTime.getTime();
+		final DateTime newTime = new DateTime(theDate.getTime(), DateTimeZone.UTC);
+		return newTime.plus(offsetFromUTC);
 	}
 
 	private PropertySet createIdOnlyPropertySet() {

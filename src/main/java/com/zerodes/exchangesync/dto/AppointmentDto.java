@@ -1,18 +1,18 @@
 package com.zerodes.exchangesync.dto;
 
-import java.util.Date;
 import java.util.Set;
 
 import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.HashCodeBuilder;
+import org.joda.time.DateTime;
 
 public class AppointmentDto {
 	private String exchangeId;
-	private Date lastModified;
+	private DateTime lastModified;
 	private String summary;
 	private String description;
-	private Date start;
-	private Date end;
+	private DateTime start;
+	private DateTime end;
 	private String location;
 	private PersonDto organizer;
 	private Set<PersonDto> attendees;
@@ -28,11 +28,11 @@ public class AppointmentDto {
 		this.exchangeId = exchangeId;
 	}
 	
-	public Date getLastModified() {
+	public DateTime getLastModified() {
 		return lastModified;
 	}
 	
-	public void setLastModified(Date lastModified) {
+	public void setLastModified(DateTime lastModified) {
 		this.lastModified = lastModified;
 	}
 	
@@ -52,19 +52,19 @@ public class AppointmentDto {
 		this.description = name;
 	}
 	
-	public void setStart(Date start) {
+	public void setStart(DateTime start) {
 		this.start = start;
 	}
 	
-	public Date getStart() {
+	public DateTime getStart() {
 		return start;
 	}
 	
-	public void setEnd(Date end) {
+	public void setEnd(DateTime end) {
 		this.end = end;
 	}
 	
-	public Date getEnd() {
+	public DateTime getEnd() {
 		return end;
 	}
 	

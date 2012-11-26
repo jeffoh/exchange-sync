@@ -45,7 +45,7 @@ public class SyncTasksImpl {
 			otherSource.addTask(exchangeTask);
 			stats.taskAdded();
 		} else if (exchangeTask != null && otherTask != null) {
-			if (exchangeTask.getLastModified().after(otherTask.getLastModified())) {
+			if (exchangeTask.getLastModified().isAfter(otherTask.getLastModified())) {
 				exchangeTask.copyTo(otherTask);
 				// Exchange task has a more recent modified date, so modify other task
 				if (exchangeTask.isCompleted() != otherTask.isCompleted()) {

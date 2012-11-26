@@ -1,17 +1,17 @@
 package com.zerodes.exchangesync.dto;
 
-import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 
 import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.HashCodeBuilder;
+import org.joda.time.DateTime;
 
 public class TaskDto {
 	private String exchangeId;
-	private Date lastModified;
+	private DateTime lastModified;
 	private String name;
-	private Date dueDate;
+	private DateTime dueDate;
 	private Byte priority;
 	private String url;
 	private boolean completed;
@@ -26,11 +26,11 @@ public class TaskDto {
 		this.exchangeId = exchangeId;
 	}
 	
-	public Date getLastModified() {
+	public DateTime getLastModified() {
 		return lastModified;
 	}
 
-	public void setLastModified(Date lastModified) {
+	public void setLastModified(DateTime lastModified) {
 		this.lastModified = lastModified;
 	}
 
@@ -42,11 +42,11 @@ public class TaskDto {
 		this.name = name;
 	}
 	
-	public Date getDueDate() {
+	public DateTime getDueDate() {
 		return dueDate;
 	}
 	
-	public void setDueDate(Date dueDate) {
+	public void setDueDate(DateTime dueDate) {
 		this.dueDate = dueDate;
 	}
 	
