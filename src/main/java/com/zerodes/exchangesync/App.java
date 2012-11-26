@@ -23,7 +23,7 @@ public class App {
 		
 		try {
 			// Initialize exchange source
-			final ExchangeSourceImpl exchangeSource = new ExchangeSourceImpl(settings.getExchangeHost(), settings.getExchangeUsername(), settings.getExchangePassword());
+			final ExchangeSourceImpl exchangeSource = new ExchangeSourceImpl(settings);
 			
 			// Initialize RTM source
 			final TaskSource rtmSource = new RtmTaskSourceImpl(settings);

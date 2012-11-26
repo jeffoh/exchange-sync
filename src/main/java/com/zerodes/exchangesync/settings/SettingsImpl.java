@@ -65,6 +65,11 @@ public class SettingsImpl implements Settings, ExchangeSettings {
 	}
 
 	@Override
+	public String getExchangeDomain() {
+		return userSettings.getProperty("exchangeDomain");
+	}
+
+	@Override
 	public String getUserSetting(String key) {
 		return userSettings.getProperty(key);
 	}

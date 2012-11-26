@@ -61,6 +61,7 @@ import com.zerodes.exchangesync.dto.AppointmentDto;
 import com.zerodes.exchangesync.dto.AppointmentDto.RecurrenceType;
 import com.zerodes.exchangesync.dto.PersonDto;
 import com.zerodes.exchangesync.dto.TaskDto;
+import com.zerodes.exchangesync.tasksource.ExchangeSettings;
 import com.zerodes.exchangesync.tasksource.TaskSource;
 
 public class ExchangeSourceImpl implements TaskSource, CalendarSource {
@@ -104,14 +105,17 @@ public class ExchangeSourceImpl implements TaskSource, CalendarSource {
 	private final ExchangeService service;
 	private final ExchangeEventsHandler eventsHandler;
 
-	public ExchangeSourceImpl(final String mailHost, final String username, final String password) throws Exception {
-		System.out.println("Connecting to Exchange (" + mailHost + ") as " + username + "...");
+	public ExchangeSourceImpl(final ExchangeSettings settings) throws Exception {
+		System.out.println("Connecting to Exchange (" + settings.getExchangeHost() + ") as " + settings.getExchangeUsername() + "...");
 
-		final ExchangeCredentials credentials = new WebCredentials(username, password);
+		final ExchangeCredentials credentials = new WebCredentials(
+				settings.getExchangeUsername(),
+				settings.getExchangePassword(),
+				settings.getExchangeDomain());
 		service = new ExchangeService();
 		service.setCredentials(credentials);
 		try {
-			service.setUrl(new URI("https://" + mailHost + "/EWS/Exchange.asmx"));
+			service.setUrl(new URI("https://" + settings.getExchangeHost() + "/EWS/Exchange.asmx"));
 		} catch (final URISyntaxException e) {
 			e.printStackTrace();
 		}
