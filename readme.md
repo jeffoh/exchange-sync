@@ -12,7 +12,7 @@ Linux Usage Instructions
 5. Install the EWS library: <code>./installEWSAPI.sh</code>
 6. Modify exchangesync.properties as follows:
     - Set exchangeHost to the hostname you usually use to access Outlook Web Access.
-    - Set exchangeUsername and exchangePassword to your domain username and password.
+    - Set exchangeDomain, exchangeUsername, exchangePassword to your Microsoft Exchange domain, username, and password.
     - Set rtmListName to the name of the Remember the Milk list that you want to export tasks to.
     - Set googleCalendarName to the name of the Google Calendar that you want to export appointments to.
 7. Start the application: <code>mvn exec:java</code>
