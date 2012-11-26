@@ -18,7 +18,7 @@ public class SettingsImpl implements Settings, ExchangeSettings {
 		userSettings = new Properties();
 		internalSettings = new Properties();
 		try {
-			InputStream userSettingsStream = new FileInputStream("rtmsync.properties");
+			InputStream userSettingsStream = new FileInputStream("exchangesync.properties");
 			if (userSettingsStream != null) {
 				userSettings.load(userSettingsStream);
 				userSettingsStream.close();
