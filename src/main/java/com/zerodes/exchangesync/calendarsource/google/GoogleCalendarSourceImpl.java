@@ -12,6 +12,8 @@ import java.util.Map;
 import java.util.Set;
 
 import org.joda.time.DateTimeZone;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.api.client.auth.oauth2.Credential;
 import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp;
@@ -41,37 +43,27 @@ import com.zerodes.exchangesync.dto.PersonDto;
 import com.zerodes.exchangesync.settings.Settings;
 
 public class GoogleCalendarSourceImpl implements CalendarSource {
+	private static final Logger LOG = LoggerFactory.getLogger(GoogleCalendarSourceImpl.class);
 
 	// Google Id and Secret from https://code.google.com/apis/console/?pli=1#project:861974414961:access
 	private static final String GOOGLE_CLIENT_ID = "861974414961.apps.googleusercontent.com";
 	private static final String GOOGLE_CLIENT_SECRET = "RsmjfTuIDbNxLU_MdPOlvgVR";
-		
 	private static final String USER_SETTING_CALENDAR_NAME = "googleCalendarName";
-	
 	private static final String EXT_PROPERTY_EXCHANGE_ID = "exchangeId";
 
-	/** Global instance of the HTTP transport. */
 	private final HttpTransport HTTP_TRANSPORT = new NetHttpTransport();
-
-	/** Global instance of the JSON factory. */
 	private final JsonFactory JSON_FACTORY = new JacksonFactory();
-
 	private com.google.api.services.calendar.Calendar client;
-
 	private String calendarId;
 
-	public GoogleCalendarSourceImpl(final Settings settings) {
-		try {
-			System.out.println("Connecting to Google Calendar...");
-			Credential credential = authorize();
-			client = new com.google.api.services.calendar.Calendar.Builder(HTTP_TRANSPORT, JSON_FACTORY, credential)
-				.setApplicationName("Exchange Sync/1.0")
-				.build();
-			calendarId = getCalendarId(settings.getUserSetting(USER_SETTING_CALENDAR_NAME));
-			System.out.println("Connected to Google Calendar.");
-		} catch (final Exception e) {
-			e.printStackTrace();
-		}
+	public GoogleCalendarSourceImpl(final Settings settings) throws Exception {
+		LOG.info("Connecting to Google Calendar...");
+		Credential credential = authorize();
+		client = new com.google.api.services.calendar.Calendar.Builder(HTTP_TRANSPORT, JSON_FACTORY, credential)
+			.setApplicationName("Exchange Sync/1.0")
+			.build();
+		calendarId = getCalendarId(settings.getUserSetting(USER_SETTING_CALENDAR_NAME));
+		LOG.info("Connected to Google Calendar.");
 	}
 
 	/** Authorizes the installed application to access user's protected data. */
@@ -106,7 +98,7 @@ public class GoogleCalendarSourceImpl implements CalendarSource {
 		final Collection<AppointmentDto> results = new HashSet<AppointmentDto>();
 		try {
 			int page = 1;
-			System.out.println("Retrieving Google Calendar events page " + page);
+			LOG.info("Retrieving Google Calendar events page " + page);
 			Events feed = client.events().list(calendarId).execute();
 			while (true) {
 				if (feed.getItems() != null) {
@@ -117,14 +109,14 @@ public class GoogleCalendarSourceImpl implements CalendarSource {
 				String pageToken = feed.getNextPageToken();
 				if (pageToken != null && !pageToken.isEmpty()) {
 					page++;
-					System.out.println("Retrieving Google Calendar events page " + page);
+					LOG.info("Retrieving Google Calendar events page " + page);
 					feed = client.events().list(calendarId).setPageToken(pageToken).execute();
 				} else {
 					break;
 				}
 			}
 		} catch (final IOException ex) {
-			ex.printStackTrace();
+			LOG.error("Unable to retrieve appointments", ex);
 		}
 		return results;
 	}
@@ -230,7 +222,7 @@ public class GoogleCalendarSourceImpl implements CalendarSource {
 		try {
 			client.events().insert(calendarId, event).execute();
 		} catch (final IOException e) {
-			e.printStackTrace();
+			LOG.error("Unable to add Google Calendar appointment", e);
 		}
 	}
 
@@ -242,7 +234,7 @@ public class GoogleCalendarSourceImpl implements CalendarSource {
 			populateEventFromAppointmentDto(appointmentDto, event);
 			client.events().update(calendarId, event.getId(), event).execute();
 		} catch (final IOException e) {
-			e.printStackTrace();
+			LOG.error("Unable to update Google calendar appointment", e);
 		}
 	}
 
@@ -252,7 +244,7 @@ public class GoogleCalendarSourceImpl implements CalendarSource {
 		try {
 			client.events().delete(calendarId, googleAppointmentDto.getGoogleId()).execute();
 		} catch (final IOException e) {
-			e.printStackTrace();
+			LOG.error("Unable to delete Google calendar appointment", e);
 		}
 	}
 

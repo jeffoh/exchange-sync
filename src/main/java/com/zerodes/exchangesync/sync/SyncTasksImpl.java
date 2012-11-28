@@ -7,6 +7,8 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.lang.ObjectUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.zerodes.exchangesync.Pair;
 import com.zerodes.exchangesync.StatisticsCollector;
@@ -14,6 +16,7 @@ import com.zerodes.exchangesync.dto.TaskDto;
 import com.zerodes.exchangesync.tasksource.TaskSource;
 
 public class SyncTasksImpl {
+	private static final Logger LOG = LoggerFactory.getLogger(SyncTasksImpl.class);
 
 	private TaskSource exchangeSource;
 	private TaskSource otherSource;
@@ -63,7 +66,7 @@ public class SyncTasksImpl {
 	}
 
 	public void syncAll(final StatisticsCollector stats) {
-		System.out.println("Synchronizing tasks...");
+		LOG.info("Synchronizing tasks...");
 
 		// Generate matching pairs of tasks
 		Set<Pair<TaskDto, TaskDto>> pairs = generatePairs();

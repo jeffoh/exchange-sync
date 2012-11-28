@@ -23,6 +23,8 @@ import org.dom4j.io.SAXReader;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.zerodes.exchangesync.dto.NoteDto;
 import com.zerodes.exchangesync.dto.TaskDto;
@@ -30,6 +32,8 @@ import com.zerodes.exchangesync.settings.Settings;
 import com.zerodes.exchangesync.tasksource.TaskSource;
 
 public class RtmTaskSourceImpl implements TaskSource {
+	private static final Logger LOG = LoggerFactory.getLogger(RtmTaskSourceImpl.class);
+	
 	private static final String RTM_API_KEY = "0bcf4c7e3182ec34f45321512e576300";
 	private static final String RTM_SHARED_SECRET = "fbf7a0bdb0011532";
 
@@ -53,21 +57,17 @@ public class RtmTaskSourceImpl implements TaskSource {
 		AUTHORIZED
 	}
 
-	public RtmTaskSourceImpl(final Settings settings) {
+	public RtmTaskSourceImpl(final Settings settings) throws RtmServerException {
 		this.settings = settings;
-		System.out.println("Connecting to Remember The Milk...");
-		try {
-			switch (getAuthStatus()) {
-			case NEEDS_USER_APPROVAL:
-				throw new RuntimeException("Please go to the following URL to authorize application to sync with Remember The Milk: "
-						+ getAuthenticationUrl("write"));
-			case NEEDS_AUTH_TOKEN:
-				completeAuthentication();
-			}
-			this.defaultRtmListId = getIdForListName(settings.getUserSetting(USER_SETTING_RTM_LIST_NAME));
-		} catch (RtmServerException e) {
-			e.printStackTrace();
+		LOG.info("Connecting to Remember The Milk...");
+		switch (getAuthStatus()) {
+		case NEEDS_USER_APPROVAL:
+			throw new RuntimeException("Please go to the following URL to authorize application to sync with Remember The Milk: "
+					+ getAuthenticationUrl("write"));
+		case NEEDS_AUTH_TOKEN:
+			completeAuthentication();
 		}
+		this.defaultRtmListId = getIdForListName(settings.getUserSetting(USER_SETTING_RTM_LIST_NAME));
 	}
 	
 	@Override
@@ -76,7 +76,7 @@ public class RtmTaskSourceImpl implements TaskSource {
 		try {
 			results = getAllTasks(defaultRtmListId);
 		} catch (RtmServerException e) {
-			e.printStackTrace();
+			LOG.error("Unable to retrieve Remember The Milk tasks", e);
 		}
 		return results;
 	}
@@ -102,9 +102,9 @@ public class RtmTaskSourceImpl implements TaskSource {
 
 			timelineId = createTimeline();
 			addTask(timelineId, defaultRtmListId, task);
-			System.out.println("Added RTM task " + task.getName());
+			LOG.debug("Added RTM task " + task.getName());
 		} catch (RtmServerException e) {
-			e.printStackTrace();
+			LOG.error("Unable to add Remember The Milk task", e);
 		}
 	}
 
@@ -113,11 +113,11 @@ public class RtmTaskSourceImpl implements TaskSource {
 		try {
 			String timelineId = createTimeline();
 			updateDueDate(timelineId, defaultRtmListId, (RtmTaskDto) task);
-			System.out.println("Updated RTM task due date for " + task.getName());
+			LOG.debug("Updated RTM task due date for " + task.getName());
 		} catch (RtmServerException e) {
-			e.printStackTrace();
+			LOG.error("Unable to update Remember The Milk task", e);
 		} catch (UnsupportedEncodingException e) {
-			e.printStackTrace();
+			LOG.error("Unable to update Remember The Milk task", e);
 		}
 	}
 
@@ -127,12 +127,12 @@ public class RtmTaskSourceImpl implements TaskSource {
 			String timelineId = createTimeline();
 			updateCompleteFlag(timelineId, defaultRtmListId, (RtmTaskDto) task);
 			if (task.isCompleted()) {
-				System.out.println("Marked RTM task as completed for " + task.getName());
+				LOG.debug("Marked RTM task as completed for " + task.getName());
 			} else {
-				System.out.println("Marked RTM task as incomplete for " + task.getName());
+				LOG.debug("Marked RTM task as incomplete for " + task.getName());
 			}
 		} catch (RtmServerException e) {
-			e.printStackTrace();
+			LOG.error("Unable to update Remember The Milk task", e);
 		}
 	}
 
@@ -432,7 +432,7 @@ public class RtmTaskSourceImpl implements TaskSource {
 			Document response = parseXML(getRtmMethodUri("rtm.auth.checkToken"));
 			Node tokenNode = response.selectSingleNode("/rsp/auth/token");
 			Node usernameNode = response.selectSingleNode("/rsp/auth/user/@username");
-			System.out.println("Connected to Remember The Milk as " + usernameNode.getText());
+			LOG.info("Connected to Remember The Milk as " + usernameNode.getText());
 			if (tokenNode.getText().equals(settings.getInternalSetting(INTERNAL_SETTING_AUTH_TOKEN))) {
 				return true;
 			}
@@ -470,8 +470,6 @@ public class RtmTaskSourceImpl implements TaskSource {
 			Node status = response.selectSingleNode("/rsp/@stat");
 			if (status != null) {
 				if (status.getText().equals("fail")) {
-					System.out.println("REQUEST: " + uri.toString());
-					System.out.println("RESPONSE: " + response.asXML());
 					Node errCode = response.selectSingleNode("/rsp/err/@code");
 					Node errMessage = response.selectSingleNode("/rsp/err/@msg");
 					throw new RtmServerException(Integer.valueOf(errCode.getText()), errMessage.getText());

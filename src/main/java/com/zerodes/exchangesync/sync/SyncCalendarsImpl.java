@@ -6,12 +6,16 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.zerodes.exchangesync.Pair;
 import com.zerodes.exchangesync.StatisticsCollector;
 import com.zerodes.exchangesync.calendarsource.CalendarSource;
 import com.zerodes.exchangesync.dto.AppointmentDto;
 
 public class SyncCalendarsImpl {
+	private static final Logger LOG = LoggerFactory.getLogger(SyncCalendarsImpl.class);
 	
 	private CalendarSource exchangeSource;
 	private CalendarSource otherSource;
@@ -64,7 +68,7 @@ public class SyncCalendarsImpl {
 	}
 
 	public void syncAll(final StatisticsCollector stats) {
-		System.out.println("Synchronizing calendars...");
+		LOG.info("Synchronizing calendars...");
 
 		// Generate matching pairs of CalendarEntrys
 		Set<Pair<AppointmentDto, AppointmentDto>> pairs = generatePairs();

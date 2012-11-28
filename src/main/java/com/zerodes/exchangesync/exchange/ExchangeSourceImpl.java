@@ -1,7 +1,6 @@
 package com.zerodes.exchangesync.exchange;
 
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
@@ -46,6 +45,8 @@ import microsoft.exchange.webservices.data.WellKnownFolderName;
 
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.zerodes.exchangesync.calendarsource.CalendarSource;
 import com.zerodes.exchangesync.dto.AppointmentDto;
@@ -56,6 +57,8 @@ import com.zerodes.exchangesync.tasksource.ExchangeSettings;
 import com.zerodes.exchangesync.tasksource.TaskSource;
 
 public class ExchangeSourceImpl implements TaskSource, CalendarSource {
+	private static final Logger LOG = LoggerFactory.getLogger(ExchangeSourceImpl.class);
+
 	private static final int MAX_RESULTS = 1000;
 	private static final boolean ENABLE_DEBUGGING = false;
 
@@ -95,7 +98,7 @@ public class ExchangeSourceImpl implements TaskSource, CalendarSource {
 	private final ExchangeService service;
 
 	public ExchangeSourceImpl(final ExchangeSettings settings) throws Exception {
-		System.out.println("Connecting to Exchange (" + settings.getExchangeHost() + ") as " + settings.getExchangeUsername() + "...");
+		LOG.info("Connecting to Exchange (" + settings.getExchangeHost() + ") as " + settings.getExchangeUsername() + "...");
 
 		final ExchangeCredentials credentials = new WebCredentials(
 				settings.getExchangeUsername(),
@@ -103,14 +106,10 @@ public class ExchangeSourceImpl implements TaskSource, CalendarSource {
 				settings.getExchangeDomain());
 		service = new ExchangeService();
 		service.setCredentials(credentials);
-		try {
-			service.setUrl(new URI("https://" + settings.getExchangeHost() + "/EWS/Exchange.asmx"));
-		} catch (final URISyntaxException e) {
-			e.printStackTrace();
-		}
+		service.setUrl(new URI("https://" + settings.getExchangeHost() + "/EWS/Exchange.asmx"));
 		service.setTraceEnabled(ENABLE_DEBUGGING);
 
-		System.out.println("Connected to Exchange");
+		LOG.info("Connected to Exchange.");
 	}
 
 	@Override
@@ -134,10 +133,8 @@ public class ExchangeSourceImpl implements TaskSource, CalendarSource {
 					results.add(convertToTaskDto((EmailMessage) email));
 				}
 			}
-		} catch (final URISyntaxException e) {
-			e.printStackTrace();
 		} catch (final Exception e) {
-			e.printStackTrace();
+			LOG.error("Unable to retrieve emails from Exchange", e);
 		}
 		return results;
 	}
@@ -202,7 +199,7 @@ public class ExchangeSourceImpl implements TaskSource, CalendarSource {
 		try {
 			appointmentDto.setDescription(MessageBody.getStringFromMessageBody(appointment.getBody()));
 		} catch (final Exception e) {
-			e.printStackTrace();
+			LOG.error("Unable to retrieve appointment body from Exchange", e);
 		}
 		appointmentDto.setStart(convertToJodaDateTime(appointment.getStart()));
 		appointmentDto.setEnd(convertToJodaDateTime(appointment.getEnd()));
@@ -246,7 +243,7 @@ public class ExchangeSourceImpl implements TaskSource, CalendarSource {
 		try {
 			appointmentDto.setDescription(MessageBody.getStringFromMessageBody(meeting.getBody()));
 		} catch (final Exception e) {
-			e.printStackTrace();
+			LOG.error("Unable to retrieve appointment body from Exchange", e);
 		}
 		appointmentDto.setStart(convertToJodaDateTime(meeting.getStart()));
 		appointmentDto.setEnd(convertToJodaDateTime(meeting.getEnd()));
@@ -332,7 +329,7 @@ public class ExchangeSourceImpl implements TaskSource, CalendarSource {
 			}
 			email.update(ConflictResolutionMode.AlwaysOverwrite);
 		} catch (final Exception e) {
-			e.printStackTrace();
+			LOG.error("Unable to update email due date in Exchange", e);
 		}
 	}
 
@@ -363,7 +360,7 @@ public class ExchangeSourceImpl implements TaskSource, CalendarSource {
 			}
 			email.update(ConflictResolutionMode.AlwaysOverwrite);
 		} catch (final Exception e) {
-			e.printStackTrace();
+			LOG.error("Unable to update email completed flag in Exchange", e);
 		}
 	}
 
@@ -381,10 +378,8 @@ public class ExchangeSourceImpl implements TaskSource, CalendarSource {
 			for (final Appointment appointment : appointments.getItems()) {
 				results.add(convertToAppointmentDto(appointment));
 			}
-		} catch (final URISyntaxException e) {
-			e.printStackTrace();
 		} catch (final Exception e) {
-			e.printStackTrace();
+			LOG.error("Unable to retrieve appointments from Exchange", e);
 		}
 		return results;
 	}

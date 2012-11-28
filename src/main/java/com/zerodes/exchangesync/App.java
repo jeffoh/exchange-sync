@@ -1,5 +1,8 @@
 package com.zerodes.exchangesync;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.zerodes.exchangesync.calendarsource.CalendarSource;
 import com.zerodes.exchangesync.calendarsource.google.GoogleCalendarSourceImpl;
 import com.zerodes.exchangesync.exchange.ExchangeSourceImpl;
@@ -10,6 +13,8 @@ import com.zerodes.exchangesync.tasksource.TaskSource;
 import com.zerodes.exchangesync.tasksource.rtm.RtmTaskSourceImpl;
 
 public class App {
+	private static final Logger LOG = LoggerFactory.getLogger(App.class);
+	
 	public static void main(String[] args) {
 		SettingsImpl settings = new SettingsImpl();
 		
@@ -37,7 +42,7 @@ public class App {
 			// Show stats
 			stats.display();
 		} catch (Exception e) {
-			throw new RuntimeException("An unexpected exception occurred", e);
+			LOG.error("An unexpected exception occurred", e);
 		} finally {
 			settings.save();
 		}
