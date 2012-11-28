@@ -138,7 +138,6 @@ public class AppointmentDto {
 	public int hashCode() {
 		return new HashCodeBuilder()
 			.append(exchangeId)
-			.append(lastModified)
 			.append(summary)
 			.append(description)
 			.append(start)
@@ -153,13 +152,11 @@ public class AppointmentDto {
 			return true;
 		if (obj == null)
 			return false;
-		if (getClass() != obj.getClass())
-			return false;
 		AppointmentDto other = (AppointmentDto) obj;
 		return new EqualsBuilder()
 			.append(exchangeId, other.exchangeId)
-			.append(lastModified, other.lastModified)
 			.append(summary, other.summary)
+			.append(description, other.description)
 			.append(start, other.start)
 			.append(end, other.end)
 			.append(location, other.location)

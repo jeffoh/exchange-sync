@@ -121,8 +121,6 @@ public class TaskDto {
 			return true;
 		if (obj == null)
 			return false;
-		if (getClass() != obj.getClass())
-			return false;
 		TaskDto other = (TaskDto) obj;
 		return new EqualsBuilder()
 			.append(exchangeId, other.exchangeId)

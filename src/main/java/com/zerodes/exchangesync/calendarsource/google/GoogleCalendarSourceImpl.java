@@ -129,6 +129,7 @@ public class GoogleCalendarSourceImpl implements CalendarSource {
 		result.setSummary(event.getSummary());
 		result.setDescription(event.getDescription());
 		result.setStart(convertToJodaDateTime(event.getStart()));
+		result.setEnd(convertToJodaDateTime(event.getEnd()));
 		result.setLocation(event.getLocation());
 		if (event.getOrganizer() != null) {
 			final PersonDto person = new PersonDto();

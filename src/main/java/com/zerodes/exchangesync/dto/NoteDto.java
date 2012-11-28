@@ -37,8 +37,6 @@ public class NoteDto {
 			return true;
 		if (obj == null)
 			return false;
-		if (getClass() != obj.getClass())
-			return false;
 		NoteDto other = (NoteDto) obj;
 		return new EqualsBuilder()
 			.append(title, other.title)
