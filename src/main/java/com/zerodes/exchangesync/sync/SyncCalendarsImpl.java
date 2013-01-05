@@ -25,7 +25,7 @@ public class SyncCalendarsImpl {
 		this.otherSource = otherSource;
 	}
 
-	protected Set<Pair<AppointmentDto, AppointmentDto>> generatePairs() {
+	protected Set<Pair<AppointmentDto, AppointmentDto>> generatePairs() throws Exception {
 		Set<Pair<AppointmentDto, AppointmentDto>> results = new HashSet<Pair<AppointmentDto, AppointmentDto>>();
 		Collection<AppointmentDto> otherAppointments = otherSource.getAllAppointments();
 		Collection<AppointmentDto> exchangeAppointments = exchangeSource.getAllAppointments();
@@ -50,17 +50,29 @@ public class SyncCalendarsImpl {
 	 */
 	public void sync(final AppointmentDto exchangeCalendarEntry, final AppointmentDto otherCalendarEntry, final StatisticsCollector stats) {
 		if (exchangeCalendarEntry != null && otherCalendarEntry == null) {
-			otherSource.addAppointment(exchangeCalendarEntry);
-			stats.appointmentAdded();
+			try {
+				otherSource.addAppointment(exchangeCalendarEntry);
+				stats.appointmentAdded();
+			} catch (Exception e) {
+				LOG.error("Problem adding appointment to remote data source", e);
+			}
 		} else if (exchangeCalendarEntry == null && otherCalendarEntry != null && otherCalendarEntry.getExchangeId() != null) {
-			otherSource.deleteAppointment(otherCalendarEntry);
-			stats.appointmentDeleted();
+			try {
+				otherSource.deleteAppointment(otherCalendarEntry);
+				stats.appointmentDeleted();
+			} catch (Exception e) {
+				LOG.error("Problem deleting appointment from remote data source", e);
+			}
 		} else if (exchangeCalendarEntry != null && otherCalendarEntry != null && !exchangeCalendarEntry.equals(otherCalendarEntry)) {
 			if (exchangeCalendarEntry.getLastModified().isAfter(otherCalendarEntry.getLastModified())) {
 				// Exchange CalendarEntry has a more recent modified date, so modify other CalendarEntry
-				exchangeCalendarEntry.copyTo(otherCalendarEntry);
-				otherSource.updateAppointment(otherCalendarEntry);
-				stats.appointmentUpdated();
+				try {
+					exchangeCalendarEntry.copyTo(otherCalendarEntry);
+					otherSource.updateAppointment(otherCalendarEntry);
+					stats.appointmentUpdated();
+				} catch (Exception e) {
+					LOG.error("Problem updating appointment in remote data source", e);
+				}
 			} else {
 				// Other CalendarEntry has a more recent modified date, so modify Exchange
 			}
@@ -70,12 +82,16 @@ public class SyncCalendarsImpl {
 	public void syncAll(final StatisticsCollector stats) {
 		LOG.info("Synchronizing calendars...");
 
-		// Generate matching pairs of CalendarEntrys
-		Set<Pair<AppointmentDto, AppointmentDto>> pairs = generatePairs();
+		// Generate matching pairs of appointments
+		try {
+			Set<Pair<AppointmentDto, AppointmentDto>>pairs = generatePairs();
 
-		// Create/complete/delete as required
-		for (Pair<AppointmentDto, AppointmentDto> pair : pairs) {
-			sync(pair.getLeft(), pair.getRight(), stats);
+			// Create/complete/delete as required
+			for (Pair<AppointmentDto, AppointmentDto> pair : pairs) {
+				sync(pair.getLeft(), pair.getRight(), stats);
+			}
+		} catch (Exception e) {
+			LOG.error("Problem retrieving appointments - sync aborted", e);
 		}
 	}
 

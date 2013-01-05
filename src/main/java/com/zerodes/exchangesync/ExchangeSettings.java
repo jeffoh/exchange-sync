@@ -1,4 +1,4 @@
-package com.zerodes.exchangesync.tasksource;
+package com.zerodes.exchangesync;
 
 public interface ExchangeSettings {
 

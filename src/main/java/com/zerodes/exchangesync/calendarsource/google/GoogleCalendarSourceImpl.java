@@ -94,29 +94,25 @@ public class GoogleCalendarSourceImpl implements CalendarSource {
 	}
 
 	@Override
-	public Collection<AppointmentDto> getAllAppointments() {
+	public Collection<AppointmentDto> getAllAppointments() throws IOException {
 		final Collection<AppointmentDto> results = new HashSet<AppointmentDto>();
-		try {
-			int page = 1;
-			LOG.info("Retrieving Google Calendar events page " + page);
-			Events feed = client.events().list(calendarId).execute();
-			while (true) {
-				if (feed.getItems() != null) {
-					for (final Event event : feed.getItems()) {
-						results.add(convertToAppointmentDto(event));
-					}
-				}
-				String pageToken = feed.getNextPageToken();
-				if (pageToken != null && !pageToken.isEmpty()) {
-					page++;
-					LOG.info("Retrieving Google Calendar events page " + page);
-					feed = client.events().list(calendarId).setPageToken(pageToken).execute();
-				} else {
-					break;
+		int page = 1;
+		LOG.info("Retrieving Google Calendar events page " + page);
+		Events feed = client.events().list(calendarId).execute();
+		while (true) {
+			if (feed.getItems() != null) {
+				for (final Event event : feed.getItems()) {
+					results.add(convertToAppointmentDto(event));
 				}
 			}
-		} catch (final IOException ex) {
-			LOG.error("Unable to retrieve appointments", ex);
+			String pageToken = feed.getNextPageToken();
+			if (pageToken != null && !pageToken.isEmpty()) {
+				page++;
+				LOG.info("Retrieving Google Calendar events page " + page);
+				feed = client.events().list(calendarId).setPageToken(pageToken).execute();
+			} else {
+				break;
+			}
 		}
 		return results;
 	}
@@ -211,7 +207,7 @@ public class GoogleCalendarSourceImpl implements CalendarSource {
 	}
 	
 	@Override
-	public void addAppointment(final AppointmentDto appointmentDto) {
+	public void addAppointment(final AppointmentDto appointmentDto) throws IOException {
 		final Event event = new Event();
 		Map<String, String> privateProperties = new HashMap<String, String>();
 		privateProperties.put(EXT_PROPERTY_EXCHANGE_ID, appointmentDto.getExchangeId());
@@ -220,33 +216,21 @@ public class GoogleCalendarSourceImpl implements CalendarSource {
 		event.setExtendedProperties(extProperties);
 		populateEventFromAppointmentDto(appointmentDto, event);
 
-		try {
-			client.events().insert(calendarId, event).execute();
-		} catch (final IOException e) {
-			LOG.error("Unable to add Google Calendar appointment", e);
-		}
+		client.events().insert(calendarId, event).execute();
 	}
 
 	@Override
-	public void updateAppointment(final AppointmentDto appointmentDto) {
+	public void updateAppointment(final AppointmentDto appointmentDto) throws IOException {
 		GoogleAppointmentDto googleAppointmentDto = (GoogleAppointmentDto) appointmentDto;
-		try {
-			Event event = client.events().get(calendarId, googleAppointmentDto.getGoogleId()).execute();
-			populateEventFromAppointmentDto(appointmentDto, event);
-			client.events().update(calendarId, event.getId(), event).execute();
-		} catch (final IOException e) {
-			LOG.error("Unable to update Google calendar appointment", e);
-		}
+		Event event = client.events().get(calendarId, googleAppointmentDto.getGoogleId()).execute();
+		populateEventFromAppointmentDto(appointmentDto, event);
+		client.events().update(calendarId, event.getId(), event).execute();
 	}
 
 	@Override
-	public void deleteAppointment(final AppointmentDto appointmentDto) {
+	public void deleteAppointment(final AppointmentDto appointmentDto) throws IOException {
 		GoogleAppointmentDto googleAppointmentDto = (GoogleAppointmentDto) appointmentDto;
-		try {
-			client.events().delete(calendarId, googleAppointmentDto.getGoogleId()).execute();
-		} catch (final IOException e) {
-			LOG.error("Unable to delete Google calendar appointment", e);
-		}
+		client.events().delete(calendarId, googleAppointmentDto.getGoogleId()).execute();
 	}
 
 	private DateTime convertToDateTime(final org.joda.time.DateTime date) {

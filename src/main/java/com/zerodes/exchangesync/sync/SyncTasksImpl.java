@@ -26,7 +26,7 @@ public class SyncTasksImpl {
 		this.otherSource = otherSource;
 	}
 
-	protected Set<Pair<TaskDto, TaskDto>> generatePairs() {
+	protected Set<Pair<TaskDto, TaskDto>> generatePairs() throws Exception {
 		Set<Pair<TaskDto, TaskDto>> results = new HashSet<Pair<TaskDto, TaskDto>>();
 		Collection<TaskDto> otherTasks = otherSource.getAllTasks();
 		Collection<TaskDto> exchangeTasks = exchangeSource.getAllTasks();
@@ -45,19 +45,31 @@ public class SyncTasksImpl {
 	 */
 	public void sync(final TaskDto exchangeTask, final TaskDto otherTask, final StatisticsCollector stats) {
 		if (exchangeTask != null && !exchangeTask.isCompleted() && otherTask == null) {
-			otherSource.addTask(exchangeTask);
-			stats.taskAdded();
+			try {
+				otherSource.addTask(exchangeTask);
+				stats.taskAdded();
+			} catch (Exception e) {
+				LOG.error("Problem adding task to remote data source", e);
+			}
 		} else if (exchangeTask != null && otherTask != null) {
 			if (exchangeTask.getLastModified().isAfter(otherTask.getLastModified())) {
 				exchangeTask.copyTo(otherTask);
 				// Exchange task has a more recent modified date, so modify other task
 				if (exchangeTask.isCompleted() != otherTask.isCompleted()) {
-					otherSource.updateCompletedFlag(otherTask);
-					stats.taskUpdated();
+					try {
+						otherSource.updateCompletedFlag(otherTask);
+						stats.taskUpdated();
+					} catch (Exception e) {
+						LOG.error("Problem updating task on remote data source", e);
+					}
 				}
 				if (!ObjectUtils.equals(exchangeTask.getDueDate(), otherTask.getDueDate())) {
-					otherSource.updateDueDate(otherTask);
-					stats.taskUpdated();
+					try {
+						otherSource.updateDueDate(otherTask);
+						stats.taskUpdated();
+					} catch (Exception e) {
+						LOG.error("Problem updating task on remote data source", e);
+					}
 				}
 			} else {
 				// Other task has a more recent modified date, so modify Exchange
@@ -69,11 +81,14 @@ public class SyncTasksImpl {
 		LOG.info("Synchronizing tasks...");
 
 		// Generate matching pairs of tasks
-		Set<Pair<TaskDto, TaskDto>> pairs = generatePairs();
-
-		// Create/complete/delete as required
-		for (Pair<TaskDto, TaskDto> pair : pairs) {
-			sync(pair.getLeft(), pair.getRight(), stats);
+		try {
+			Set<Pair<TaskDto, TaskDto>> pairs = generatePairs();
+			// Create/complete/delete as required
+			for (Pair<TaskDto, TaskDto> pair : pairs) {
+				sync(pair.getLeft(), pair.getRight(), stats);
+			}
+		} catch (Exception e) {
+			LOG.error("Problem retrieving tasks - sync aborted", e);
 		}
 	}
 

@@ -48,12 +48,12 @@ import org.joda.time.DateTimeZone;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.zerodes.exchangesync.ExchangeSettings;
 import com.zerodes.exchangesync.calendarsource.CalendarSource;
 import com.zerodes.exchangesync.dto.AppointmentDto;
 import com.zerodes.exchangesync.dto.AppointmentDto.RecurrenceType;
 import com.zerodes.exchangesync.dto.PersonDto;
 import com.zerodes.exchangesync.dto.TaskDto;
-import com.zerodes.exchangesync.tasksource.ExchangeSettings;
 import com.zerodes.exchangesync.tasksource.TaskSource;
 
 public class ExchangeSourceImpl implements TaskSource, CalendarSource {
@@ -118,23 +118,19 @@ public class ExchangeSourceImpl implements TaskSource, CalendarSource {
 	}
 
 	@Override
-	public Set<TaskDto> getAllTasks() {
+	public Set<TaskDto> getAllTasks() throws Exception {
 		final Set<TaskDto> results = new HashSet<TaskDto>();
-		try {
-			// Take a look at http://blogs.planetsoftware.com.au/paul/archive/2010/05/20/exchange-web-services-ews-managed-api-ndash-part-2.aspx
-			final SearchFilterCollection searchFilterCollection = new SearchFilterCollection(LogicalOperator.Or);
-			searchFilterCollection.add(new SearchFilter.IsEqualTo(PR_FLAG_STATUS, "1"));
-			searchFilterCollection.add(new SearchFilter.IsEqualTo(PR_FLAG_STATUS, "2"));
-			final ItemView itemView = new ItemView(MAX_RESULTS);
-			itemView.setPropertySet(createEmailPropertySet());
-			final FindItemsResults<Item> items = getAllItemsFolder().findItems(searchFilterCollection, itemView);
-			for (final Item email : items.getItems()) {
-				if (email instanceof EmailMessage) {
-					results.add(convertToTaskDto((EmailMessage) email));
-				}
+		// Take a look at http://blogs.planetsoftware.com.au/paul/archive/2010/05/20/exchange-web-services-ews-managed-api-ndash-part-2.aspx
+		final SearchFilterCollection searchFilterCollection = new SearchFilterCollection(LogicalOperator.Or);
+		searchFilterCollection.add(new SearchFilter.IsEqualTo(PR_FLAG_STATUS, "1"));
+		searchFilterCollection.add(new SearchFilter.IsEqualTo(PR_FLAG_STATUS, "2"));
+		final ItemView itemView = new ItemView(MAX_RESULTS);
+		itemView.setPropertySet(createEmailPropertySet());
+		final FindItemsResults<Item> items = getAllItemsFolder().findItems(searchFilterCollection, itemView);
+		for (final Item email : items.getItems()) {
+			if (email instanceof EmailMessage) {
+				results.add(convertToTaskDto((EmailMessage) email));
 			}
-		} catch (final Exception e) {
-			LOG.error("Unable to retrieve emails from Exchange", e);
 		}
 		return results;
 	}
@@ -365,21 +361,17 @@ public class ExchangeSourceImpl implements TaskSource, CalendarSource {
 	}
 
 	@Override
-	public Collection<AppointmentDto> getAllAppointments() {
+	public Collection<AppointmentDto> getAllAppointments() throws Exception {
 		final Set<AppointmentDto> results = new HashSet<AppointmentDto>();
-		try {
-			final DateTime now = new DateTime();
-			final DateTime minus6Months = now.minusMonths(6);
-			final DateTime plus6Months = now.plusMonths(6);
-			final CalendarView calendarView = new CalendarView(minus6Months.toDate(), plus6Months.toDate(), MAX_RESULTS);
-			calendarView.setPropertySet(createIdOnlyPropertySet());
-			final FindItemsResults<Appointment> appointments = service.findAppointments(WellKnownFolderName.Calendar, calendarView);
-			service.loadPropertiesForItems(appointments, createCalendarPropertySet());
-			for (final Appointment appointment : appointments.getItems()) {
-				results.add(convertToAppointmentDto(appointment));
-			}
-		} catch (final Exception e) {
-			LOG.error("Unable to retrieve appointments from Exchange", e);
+		final DateTime now = new DateTime();
+		final DateTime minus6Months = now.minusMonths(6);
+		final DateTime plus6Months = now.plusMonths(6);
+		final CalendarView calendarView = new CalendarView(minus6Months.toDate(), plus6Months.toDate(), MAX_RESULTS);
+		calendarView.setPropertySet(createIdOnlyPropertySet());
+		final FindItemsResults<Appointment> appointments = service.findAppointments(WellKnownFolderName.Calendar, calendarView);
+		service.loadPropertiesForItems(appointments, createCalendarPropertySet());
+		for (final Appointment appointment : appointments.getItems()) {
+			results.add(convertToAppointmentDto(appointment));
 		}
 		return results;
 	}

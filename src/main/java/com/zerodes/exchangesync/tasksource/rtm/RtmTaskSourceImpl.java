@@ -71,68 +71,50 @@ public class RtmTaskSourceImpl implements TaskSource {
 	}
 	
 	@Override
-	public Collection<TaskDto> getAllTasks() {
+	public Collection<TaskDto> getAllTasks() throws Exception {
 		Collection<TaskDto> results = new ArrayList<TaskDto>();
-		try {
-			results = getAllTasks(defaultRtmListId);
-		} catch (RtmServerException e) {
-			LOG.error("Unable to retrieve Remember The Milk tasks", e);
-		}
+		results = getAllTasks(defaultRtmListId);
 		return results;
 	}
 
 	@Override
-	public void addTask(TaskDto task) {
+	public void addTask(TaskDto task) throws Exception {
 		String timelineId;
-		try {
-			// Add email tag
-			task.addTag("email");
+		// Add email tag
+		task.addTag("email");
 
-			// Add ExchangeID note
-			NoteDto exchangeIdNote = new NoteDto();
-			exchangeIdNote.setTitle(EXCHANGE_ID_NOTE_TITLE);
-			exchangeIdNote.setBody(task.getExchangeId());
-			task.addNote(exchangeIdNote);
+		// Add ExchangeID note
+		NoteDto exchangeIdNote = new NoteDto();
+		exchangeIdNote.setTitle(EXCHANGE_ID_NOTE_TITLE);
+		exchangeIdNote.setBody(task.getExchangeId());
+		task.addNote(exchangeIdNote);
 
-			// Add Original Subject note
-			NoteDto originalSubjectNote = new NoteDto();
-			originalSubjectNote.setTitle(ORIGINAL_SUBJECT_NOTE_TITLE);
-			originalSubjectNote.setBody(task.getName());
-			task.addNote(originalSubjectNote);
+		// Add Original Subject note
+		NoteDto originalSubjectNote = new NoteDto();
+		originalSubjectNote.setTitle(ORIGINAL_SUBJECT_NOTE_TITLE);
+		originalSubjectNote.setBody(task.getName());
+		task.addNote(originalSubjectNote);
 
-			timelineId = createTimeline();
-			addTask(timelineId, defaultRtmListId, task);
-			LOG.debug("Added RTM task " + task.getName());
-		} catch (RtmServerException e) {
-			LOG.error("Unable to add Remember The Milk task", e);
-		}
+		timelineId = createTimeline();
+		addTask(timelineId, defaultRtmListId, task);
+		LOG.debug("Added RTM task " + task.getName());
 	}
 
 	@Override
-	public void updateDueDate(TaskDto task) {
-		try {
-			String timelineId = createTimeline();
-			updateDueDate(timelineId, defaultRtmListId, (RtmTaskDto) task);
-			LOG.debug("Updated RTM task due date for " + task.getName());
-		} catch (RtmServerException e) {
-			LOG.error("Unable to update Remember The Milk task", e);
-		} catch (UnsupportedEncodingException e) {
-			LOG.error("Unable to update Remember The Milk task", e);
-		}
+	public void updateDueDate(TaskDto task) throws Exception {
+		String timelineId = createTimeline();
+		updateDueDate(timelineId, defaultRtmListId, (RtmTaskDto) task);
+		LOG.debug("Updated RTM task due date for " + task.getName());
 	}
 
 	@Override
-	public void updateCompletedFlag(TaskDto task) {
-		try {
-			String timelineId = createTimeline();
-			updateCompleteFlag(timelineId, defaultRtmListId, (RtmTaskDto) task);
-			if (task.isCompleted()) {
-				LOG.debug("Marked RTM task as completed for " + task.getName());
-			} else {
-				LOG.debug("Marked RTM task as incomplete for " + task.getName());
-			}
-		} catch (RtmServerException e) {
-			LOG.error("Unable to update Remember The Milk task", e);
+	public void updateCompletedFlag(TaskDto task) throws Exception {
+		String timelineId = createTimeline();
+		updateCompleteFlag(timelineId, defaultRtmListId, (RtmTaskDto) task);
+		if (task.isCompleted()) {
+			LOG.debug("Marked RTM task as completed for " + task.getName());
+		} else {
+			LOG.debug("Marked RTM task as incomplete for " + task.getName());
 		}
 	}
 
