@@ -22,22 +22,26 @@ public class App {
 			// Initialize exchange source
 			final ExchangeSourceImpl exchangeSource = new ExchangeSourceImpl(settings);
 			
-			// Initialize RTM source
-			final TaskSource rtmSource = new RtmTaskSourceImpl(settings);
-			
-			// Initialize Google source
-			final CalendarSource googleSource = new GoogleCalendarSourceImpl(settings);
-			
 			// Initialize statistics collector
 			final StatisticsCollector stats = new StatisticsCollector();
 			
-			// Synchronize calendars
-			final SyncCalendarsImpl syncCalendars = new SyncCalendarsImpl(exchangeSource, googleSource);
-			syncCalendars.syncAll(stats);
+			if (settings.syncAppointments()) {
+				// Initialize Google source
+				final CalendarSource googleSource = new GoogleCalendarSourceImpl(settings);
+				
+				// Synchronize appointments
+				final SyncCalendarsImpl syncCalendars = new SyncCalendarsImpl(exchangeSource, googleSource);
+				syncCalendars.syncAll(stats);
+			}
 			
-			// Synchronize tasks
-			final SyncTasksImpl syncTasks = new SyncTasksImpl(exchangeSource, rtmSource);
-			syncTasks.syncAll(stats);
+			if (settings.syncTasks()) {
+				// Initialize RTM source
+				final TaskSource rtmSource = new RtmTaskSourceImpl(settings);
+				
+				// Synchronize tasks
+				final SyncTasksImpl syncTasks = new SyncTasksImpl(exchangeSource, rtmSource);
+				syncTasks.syncAll(stats);
+			}
 			
 			// Show stats
 			stats.display();

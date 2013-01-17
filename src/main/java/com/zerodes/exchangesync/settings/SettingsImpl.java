@@ -48,6 +48,23 @@ public class SettingsImpl implements Settings, ExchangeSettings {
 			throw new RuntimeException("Unable to save settings.", e);
 		}
 	}
+	
+
+	@Override
+	public boolean syncTasks() {
+		if ("true".equalsIgnoreCase(userSettings.getProperty("syncTasks"))) {
+			return true;
+		}
+		return false;
+	}
+
+	@Override
+	public boolean syncAppointments() {
+		if ("true".equalsIgnoreCase(userSettings.getProperty("syncAppointments"))) {
+			return true;
+		}
+		return false;
+	}
 
 	@Override
 	public String getExchangeHost() {
