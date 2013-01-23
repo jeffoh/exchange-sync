@@ -9,4 +9,6 @@ public interface ExchangeSettings {
 	String getExchangePassword();
 
 	String getExchangeDomain();
+
+	String getExchangeVersion();
 }

@@ -19,6 +19,7 @@ import microsoft.exchange.webservices.data.EmailAddress;
 import microsoft.exchange.webservices.data.EmailMessage;
 import microsoft.exchange.webservices.data.ExchangeCredentials;
 import microsoft.exchange.webservices.data.ExchangeService;
+import microsoft.exchange.webservices.data.ExchangeVersion;
 import microsoft.exchange.webservices.data.ExtendedProperty;
 import microsoft.exchange.webservices.data.ExtendedPropertyDefinition;
 import microsoft.exchange.webservices.data.FindFoldersResults;
@@ -104,7 +105,7 @@ public class ExchangeSourceImpl implements TaskSource, CalendarSource {
 				settings.getExchangeUsername(),
 				settings.getExchangePassword(),
 				settings.getExchangeDomain());
-		service = new ExchangeService();
+		service = new ExchangeService(ExchangeVersion.valueOf(settings.getExchangeVersion()));
 		service.setCredentials(credentials);
 		service.setUrl(new URI("https://" + settings.getExchangeHost() + "/EWS/Exchange.asmx"));
 		service.setTraceEnabled(ENABLE_DEBUGGING);
