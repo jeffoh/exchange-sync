@@ -18,7 +18,7 @@ public class SettingsImpl implements Settings, ExchangeSettings {
 		userSettings = new Properties();
 		internalSettings = new Properties();
 		try {
-			InputStream userSettingsStream = new FileInputStream("exchangesync.properties");
+			InputStream userSettingsStream = new FileInputStream(System.getProperty("exchangesync.properties", "exchangesync.properties"));
 			if (userSettingsStream != null) {
 				userSettings.load(userSettingsStream);
 				userSettingsStream.close();
@@ -84,6 +84,11 @@ public class SettingsImpl implements Settings, ExchangeSettings {
 	@Override
 	public String getExchangeDomain() {
 		return userSettings.getProperty("exchangeDomain");
+	}
+
+	@Override
+	public String getExchangeVersion() {
+	    return userSettings.getProperty("exchangeVersion");
 	}
 
 	@Override
